@@ -1,3 +1,7 @@
+function toRadians (degrees: number) { return degrees * (Math.PI / 180);}
+function toDegrees (radians: number) { return radians * (180 / Math.PI);}
+
+
 class Game {
 
   /** Height and width units */
@@ -10,26 +14,27 @@ class Game {
     yPadding: 50,
     /** Size of each goal */
     xPadding: 50,
+    boundarySize: 5,
   }
 
   /** Units per second - default value used at the beginning of each round */
-  initialVelocity = 10;
+  initialVelocity = 1;
 
-  /** Velocity used for the current round */
-  velocity: number;
-
-  /** Ball diameter in game units */
-  ballSize = 8;
-
-  /** Position of the ball in the playable board area */
-  ballPoisition = {
+  ball = {
+    /** Ball diameter in game units */
+    size: 8,
+    /** Position of the ball in the playable board area */
     x: 0,
     y: 0,
-  };
+    /** Velocity used for the current round */
+    velocity: this.initialVelocity,
+    /** Degrees */
+    angle: 80,
 
+  }
   /** Padle height in game units */
   padle = {
-    height: 50,
+    height: 30,
     width: 4
   };
 
@@ -54,7 +59,16 @@ class Game {
     this.initCanvas();
     this.initGameState();
 
-    this.render();
+    let playing = true;
+    const gameLoop = () => {
+      this.update();
+      this.render();
+      
+      if (playing) {
+        window.requestAnimationFrame(gameLoop);
+      }
+    };
+    gameLoop();
   }
 
   initGameState() {
@@ -66,8 +80,9 @@ class Game {
     this.player.two = middleY;
 
     // Set initial ball position (middle)
-    this.ballPoisition.x = middleX;
-    this.ballPoisition.y = middleY;
+
+    this.ball.x = middleX;
+    this.ball.y = middleY;
   }
 
   initCanvas() {
@@ -86,7 +101,40 @@ class Game {
   }
 
   update() {
-    
+
+    const deltaX = Math.cos(toRadians(this.ball.angle)) * this.ball.velocity;
+    const deltaY = Math.sin(toRadians(this.ball.angle)) * this.ball.velocity * -1;
+
+    let projectedX = this.ball.x + deltaX;
+    let projectedY = this.ball.y + deltaY;
+
+    const ballRadius = this.ball.size / 2;
+
+    console.log(projectedX, projectedY);
+
+    // First, determine if the ball is going towards the top or bottom edge
+    if (deltaY < 0) {
+      // Top
+      if (projectedY - ballRadius < 0) {
+        // Intersected with the edge of the board
+        const overshoot = projectedY - ballRadius;
+        this.ball.angle = (360 - this.ball.angle) % 360;
+      } else {
+        // Everything is fine - Y travels normally
+      }
+    } else {
+      // Bottom
+      if (projectedY + ballRadius > this.board.height) {
+        const over = projectedY - ballRadius - this.board.height;
+        projectedY = this.board.height + over;
+        this.ball.angle = (360 - this.ball.angle) % 360;
+      } else {
+        // Everythign is fine - Y travels normally
+      }
+    }
+
+    this.ball.x = projectedX;
+    this.ball.y = projectedY;
   }
 
   render() {
@@ -94,16 +142,18 @@ class Game {
 
     const height = this.board.height + this.board.yPadding * 2;
     const width = this.board.width + this.board.xPadding * 2;
+    
+    // Clear out the canvas
+    this.ctx.clearRect(0, 0, this.canvasEl.width, this.canvasEl.height);
 
     // Draw the board background
-    this.ctx.fillRect(0, 0, width , height);
+    this.ctx.fillRect(0, 0, width, height);
 
     // Draw the game objects
     this.drawPadles();
     this.drawBall();
+    this.drawBoundaries();
     // this.drawScore();
-    // this.drawBoundaries();
-
   }
 
   drawPadles() {
@@ -131,16 +181,39 @@ class Game {
   drawBall() {
     this.ctx.fillStyle = 'white';
     
+    this.ctx.beginPath();
     this.ctx.arc(
-      this.board.xPadding + this.ballPoisition.x,
-      this.board.yPadding + this.ballPoisition.y,
+      this.board.xPadding + this.ball.x,
+      this.board.yPadding + this.ball.y,
 
-      this.ballSize / 2,
+      this.ball.size / 2,
       0,
       2 * Math.PI
     );
     
     this.ctx.fill();
+  }
+
+  drawBoundaries() {
+    // Top edge
+    this.ctx.fillRect(
+      this.board.xPadding - this.board.boundarySize,
+      this.board.yPadding - this.board.boundarySize,
+
+      this.board.width + this.board.boundarySize * 2,
+      this.board.boundarySize
+    );
+
+
+    // Bottom edge
+    this.ctx.fillRect(
+      this.board.xPadding - this.board.boundarySize,
+      this.board.yPadding + this.board.height,
+
+      this.board.width + this.board.boundarySize * 2,
+      this.board.boundarySize
+    );
+
   }
 
   getPlayableArea() {
