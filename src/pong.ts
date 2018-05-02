@@ -18,7 +18,7 @@ class Game {
   }
 
   /** Units per second - default value used at the beginning of each round */
-  initialVelocity = 1;
+  initialVelocity = 2;  
 
   ball = {
     /** Ball diameter in game units */
@@ -29,7 +29,7 @@ class Game {
     /** Velocity used for the current round */
     velocity: this.initialVelocity,
     /** Degrees */
-    angle: 80,
+    angle: 45,
 
   }
   /** Padle height in game units */
@@ -65,7 +65,7 @@ class Game {
       this.render();
       
       if (playing) {
-        window.requestAnimationFrame(gameLoop);
+        window.requestAnimationFrame(() => window.requestAnimationFrame(gameLoop));
       }
     };
     gameLoop();
@@ -113,23 +113,38 @@ class Game {
     console.log(projectedX, projectedY);
 
     // First, determine if the ball is going towards the top or bottom edge
-    if (deltaY < 0) {
-      // Top
-      if (projectedY - ballRadius < 0) {
-        // Intersected with the edge of the board
-        const overshoot = projectedY - ballRadius;
-        this.ball.angle = (360 - this.ball.angle) % 360;
-      } else {
-        // Everything is fine - Y travels normally
-      }
-    } else {
+    if (deltaY > 0) {
       // Bottom
       if (projectedY + ballRadius > this.board.height) {
         const over = projectedY - ballRadius - this.board.height;
         projectedY = this.board.height + over;
         this.ball.angle = (360 - this.ball.angle) % 360;
-      } else {
-        // Everythign is fine - Y travels normally
+      }
+      // else: Everythign is fine - Y travels normally
+    } else {
+      // Top
+      if (projectedY - ballRadius < 0) {
+        // Intersected with the edge of the board
+        const overshoot = projectedY - ballRadius;
+        this.ball.angle = (360 - this.ball.angle) % 360;
+      }
+      // else: Everything is fine - Y travels normally
+    }
+
+    if (deltaX > 0) {
+      // Right
+      if (projectedX + ballRadius > this.board.width) {
+        // Intersect with the right edge of the board
+        const overshoot = projectedX + ballRadius - this.board.width;
+        projectedX = this.board.width - ballRadius - overshoot;
+        this.ball.angle = ((180 + this.ball.angle) * -1) % 360;
+        // this.ball.angle = (360 - this.ball.angle) % 360
+      }
+    } else {
+      if (projectedX - ballRadius < 0) {
+        const overshoot = projectedX - ballRadius
+        projectedX = 0 - overshoot + ballRadius;
+        this.ball.angle = ((180 + this.ball.angle) * -1) % 360;
       }
     }
 
