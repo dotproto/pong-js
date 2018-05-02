@@ -1,40 +1,39 @@
 // ESM syntax is supported.
 
-interface PlayerState {
-  position: number;
-}
-
-interface GameHistory {
-  player1: PlayerState;
-  player2: PlayerState;
-}
-
-interface GameBoard {
-  height: number;
-  width: number;
-}
-
 abstract class GameState {
+  position: {
+    player1: number;
+    player2: number;
+  }
+  
+  ballVelocity: number;
   volley: number;
-
-  /** Size of the ball. Effects bounce calculation & rendering properties. */
-  ballSize: number;
   ballX: number;
   ballY: number;
 }
 
 interface GameConfig {
-  board: GameBoard;
-  velocity: number;
-  keepHistory: boolean;
-  volley: number;
+  /** Width of the game's playable aread */
+  height: number;
+  
+  /** Width of the game's playable aread */
+  width: number;
+
+  /** Padel size as measured from the top edge to bottom edge of the padel */
+  padelSize: number;
+
+  /** Diameter of the ball */
+  ballSize: number;
+
+  /**  */
+  initialVelocity: number;
 }
 
 export class PongEngine {
   config: GameConfig;
-  history: GameHistory[];
+  history: GameState[];
 
-  constructor (config: GameConfig, history: GameHistory[] = []) {
+  constructor (config: GameConfig, history: GameState[] = []) {
     this.config = config;
     this.history = history;
   }
