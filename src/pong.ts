@@ -1,6 +1,21 @@
 function toRadians (degrees: number) { return degrees * (Math.PI / 180);}
 function toDegrees (radians: number) { return radians * (180 / Math.PI);}
 
+/** Math.PI is too long :( */
+  const PI = Math.PI;
+
+/** Math.PI * 2 is even longer. Plus we shouldn't re-calculate that value every time we need it */
+const TAU = Math.PI * 2;
+
+/** Reflect the input angle across the X axis */
+const mirrorX = (radians:number) =>
+    TAU - radians;
+
+/** Reflect the input angle across the Y axis */
+const mirrorY = (radians:number) =>
+	radians < PI
+		? PI - radians
+ 		: PI * 3 - radians;
 
 class Game {
 
@@ -21,15 +36,17 @@ class Game {
   initialVelocity = 2;  
 
   ball = {
-    /** Ball diameter in game units */
-    size: 8,
+    /** Ball radius in game units */
+    size: 4,
     /** Position of the ball in the playable board area */
     x: 0,
     y: 0,
     /** Velocity used for the current round */
     velocity: this.initialVelocity,
     /** Degrees */
-    angle: 45,
+    // angle: 4 * PI / 17, // hits both paddles
+    // angle: 2 * PI / 17, // misses right paddle
+    angle: 15 * PI / 17, // misses left paddle
 
   }
   /** Padle height in game units */
@@ -102,54 +119,62 @@ class Game {
 
   update() {
 
-    const deltaX = Math.cos(toRadians(this.ball.angle)) * this.ball.velocity;
-    const deltaY = Math.sin(toRadians(this.ball.angle)) * this.ball.velocity * -1;
+    const deltaX = Math.cos(this.ball.angle) * this.ball.velocity;
+    /** Invert sin to match canvas coordinate system */
+    const deltaY = Math.sin(this.ball.angle) * this.ball.velocity * -1;
 
     let projectedX = this.ball.x + deltaX;
     let projectedY = this.ball.y + deltaY;
 
-    const ballRadius = this.ball.size / 2;
-
-    console.log(projectedX, projectedY);
-
     // First, determine if the ball is going towards the top or bottom edge
     if (deltaY > 0) {
       // Bottom
-      if (projectedY + ballRadius > this.board.height) {
-        const over = projectedY - ballRadius - this.board.height;
+      if (projectedY + this.ball.size > this.board.height) {
+        const over = projectedY - this.ball.size - this.board.height;
         projectedY = this.board.height + over;
-        this.ball.angle = (360 - this.ball.angle) % 360;
+        this.ball.angle = mirrorX(this.ball.angle);
       }
       // else: Everythign is fine - Y travels normally
     } else {
       // Top
-      if (projectedY - ballRadius < 0) {
+      if (projectedY - this.ball.size < 0) {
         // Intersected with the edge of the board
-        const overshoot = projectedY - ballRadius;
-        this.ball.angle = (360 - this.ball.angle) % 360;
+        const overshoot = projectedY - this.ball.size;
+        this.ball.angle = mirrorX(this.ball.angle);
       }
       // else: Everything is fine - Y travels normally
     }
 
     if (deltaX > 0) {
       // Right
-      if (projectedX + ballRadius > this.board.width) {
+      if (projectedX + this.ball.size > this.board.width) {
         // Intersect with the right edge of the board
-        const overshoot = projectedX + ballRadius - this.board.width;
-        projectedX = this.board.width - ballRadius - overshoot;
-        this.ball.angle = ((180 + this.ball.angle) * -1) % 360;
-        // this.ball.angle = (360 - this.ball.angle) % 360
+        const overshoot = projectedX + this.ball.size - this.board.width;
+        projectedX = this.board.width - this.ball.size - overshoot;
+        this.ball.angle = mirrorY(this.ball.angle);
       }
     } else {
-      if (projectedX - ballRadius < 0) {
-        const overshoot = projectedX - ballRadius
-        projectedX = 0 - overshoot + ballRadius;
-        this.ball.angle = ((180 + this.ball.angle) * -1) % 360;
+      // Left
+      if (projectedX - this.ball.size < 0) {
+        if (this.player.one) {
+          // Ball hit the paddle, reflect!
+          const overshoot = projectedX - this.ball.size
+          projectedX = 0 - overshoot + this.ball.size;
+          this.ball.angle = mirrorY(this.ball.angle);
+        } else {
+          // Ball missed, score!
+        }
+
+        
       }
     }
 
     this.ball.x = projectedX;
     this.ball.y = projectedY;
+  }
+
+  padleCollisionCheck(player: 'one' | 'two') {
+    this.player[player] 
   }
 
   render() {
@@ -201,7 +226,7 @@ class Game {
       this.board.xPadding + this.ball.x,
       this.board.yPadding + this.ball.y,
 
-      this.ball.size / 2,
+      this.ball.size,
       0,
       2 * Math.PI
     );
