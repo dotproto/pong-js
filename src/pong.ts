@@ -43,11 +43,16 @@ class Game {
   }
 
   /** Units per second - default value used at the beginning of each round */
-  initialVelocity = 4;
-  inputQueue: {
-    player: Player;
-    move: Move;
-  }[] = [];
+  velocityInitial = 4;
+  velocityScale = 1.1;
+
+  pendingInputs: {
+    [Player.P1]: Move | null,
+    [Player.P2]: Move | null,
+  } = {
+    [Player.P1]: null,
+    [Player.P2]: null,
+  }
 
   ball = {
     /** Ball radius in game units */
@@ -56,7 +61,7 @@ class Game {
     x: 0,
     y: 0,
     /** Velocity used for the current round */
-    velocity: this.initialVelocity,
+    velocity: this.velocityInitial,
     /** Degrees */
     angle: 5 * PI / 17, // hits both paddles
     // angle: 2 * PI / 17, // misses right paddle
@@ -66,9 +71,9 @@ class Game {
   }
   /** Paddle height in game units */
   paddle = {
-    height: 30,
+    height: 40,
     width: 4,
-    speed: 2,
+    speed: 4,
   };
 
   /** Position of the player's paddles in the playable game area */
@@ -125,7 +130,7 @@ class Game {
     this.ball.x = middleX;
     this.ball.y = middleY;
 
-    this.ball.velocity = this.initialVelocity;
+    this.ball.velocity = this.velocityInitial;
   }
 
   initCanvas() {
@@ -141,11 +146,72 @@ class Game {
   }
 
   initEventHandlers() {
-    this.inputQueue = [];
+    // P1: q (81) = up, a (65) = down
+    // P2: up arrow (38) = up, down arrow (40) = down
+    document.addEventListener('keydown', event => {
+      const key = event.which;
+
+      if (event.repeat) {
+        return;
+      }
+
+      event.preventDefault();
+
+      // Player 1 keys
+      if (key === 81 || key === 65) {
+        this.pendingInputs[Player.P1] = key === 81 ? Move.UP : Move.DOWN;
+
+        // Player 2 keys
+      } else if (key === 38 || key === 40) {
+        this.pendingInputs[Player.P2] = key === 38 ? Move.UP : Move.DOWN;
+      }
+    });
+
+    document.addEventListener('keyup', event => {
+      const key = event.which;
+
+      if (event.repeat) {
+        return;
+      }
+
+      // Player 1 keys
+      if (key === 81 || key === 65) {
+        this.pendingInputs[Player.P1] = null;
+
+        // Player 2 keys
+      } else if (key === 38 || key === 40) {
+        this.pendingInputs[Player.P2] = null;
+      }
+    });
   }
 
   update() {
+    this.updatePaddles();
+    this.updateBall();
+  }
 
+  updatePaddles() {
+    // Top edge
+    const minHeight = this.paddle.height / 2;
+    // Bottom edge
+    const maxHeight = this.board.height - this.paddle.height / 2;
+
+    // Update P1
+    if (this.pendingInputs[Player.P1]) {
+      this.playerPosition[Player.P1] = this.pendingInputs[Player.P1] === Move.UP ?
+        Math.max(minHeight, -this.paddle.speed + this.playerPosition[Player.P1]) :
+        Math.min(maxHeight, this.paddle.speed + this.playerPosition[Player.P1]);
+    }
+
+    // Update P2
+    if (this.pendingInputs[Player.P2]) {
+      this.playerPosition[Player.P2] = this.pendingInputs[Player.P2] === Move.UP ?
+        Math.max(minHeight, -this.paddle.speed + this.playerPosition[Player.P2]) :
+        Math.min(maxHeight, this.paddle.speed + this.playerPosition[Player.P2]);
+    }
+  }
+
+  updateBall() {
     const deltaX = Math.cos(this.ball.angle) * this.ball.velocity;
     /** Invert sin to match canvas coordinate system */
     const deltaY = Math.sin(this.ball.angle) * this.ball.velocity * -1;
@@ -157,19 +223,18 @@ class Game {
     if (deltaY > 0) {
       // Bottom
       if (projectedY + this.ball.size > this.board.height) {
-        const over = projectedY - this.ball.size - this.board.height;
-        projectedY = this.board.height + over;
+        const overshoot = this.board.height - this.ball.size * 2 - projectedY;
+        projectedY = this.board.height + overshoot;
         this.ball.angle = mirrorX(this.ball.angle);
-        this.ball.velocity *= 1.1;
       }
       // else: Everythign is fine - Y travels normally
     } else {
       // Top
       if (projectedY - this.ball.size < 0) {
         // Intersected with the edge of the board
-        const overshoot = projectedY - this.ball.size;
+        const overshoot = projectedY - this.ball.size * 2;
+        projectedY = 0 - overshoot;
         this.ball.angle = mirrorX(this.ball.angle);
-        this.ball.velocity *= 1.1;
       }
       // else: Everything is fine - Y travels normally
     }
@@ -185,7 +250,7 @@ class Game {
           const overshoot = projectedX + this.ball.size - this.board.width;
           projectedX = this.board.width - this.ball.size - overshoot;
           this.ball.angle = mirrorY(this.ball.angle);
-          this.ball.velocity *= 1.1;
+          this.ball.velocity *= this.velocityScale;
         } else {
           return this.endVolley(Player.P1);
         }
@@ -201,7 +266,7 @@ class Game {
           const overshoot = projectedX - this.ball.size
           projectedX = 0 - overshoot + this.ball.size;
           this.ball.angle = mirrorY(this.ball.angle);
-          this.ball.velocity *= 1.1;
+          this.ball.velocity *= this.velocityScale;
         } else {
           return this.endVolley(Player.P2);
         }
@@ -242,10 +307,12 @@ class Game {
     const width = this.board.width + this.board.xPadding * 2;
     
     // Clear out the canvas
-    this.ctx.clearRect(0, 0, this.canvasEl.width, this.canvasEl.height);
+    // this.ctx.clearRect(0, 0, this.canvasEl.width, this.canvasEl.height);
 
     // Draw the board background
+    // this.ctx.globalAlpha = 0.05;
     this.ctx.fillRect(0, 0, width, height);
+    // this.ctx.globalAlpha = 1;
 
     // Draw the game objects
     this.drawBoundaries();
@@ -321,9 +388,9 @@ class Game {
     const yOffset = this.board.yPadding + this.fontSize;
     const xOffset = this.board.xPadding + this.board.width / 2;
     this.ctx.textAlign = 'right';
-    this.ctx.fillText(''+this.score[Player.P1], xOffset - this.fontSize/2, yOffset);
+    this.ctx.fillText(`${this.score[Player.P1]}`, xOffset - this.fontSize/2, yOffset);
     this.ctx.textAlign = 'left';
-    this.ctx.fillText(''+this.score[Player.P2], xOffset + this.fontSize/2, yOffset);
+    this.ctx.fillText(`${this.score[Player.P2]}`, xOffset + this.fontSize/2, yOffset);
   }
 }
 
