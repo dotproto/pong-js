@@ -1,6 +1,16 @@
 function toRadians (degrees: number) { return degrees * (Math.PI / 180);}
 function toDegrees (radians: number) { return radians * (180 / Math.PI);}
 
+enum Player {
+  P1 = 'p1',
+  P2 = 'p2',
+}
+
+enum Move {
+  UP = 'up',
+  DOWN = 'down',
+}
+
 /** Math.PI is too long :( */
   const PI = Math.PI;
 
@@ -34,6 +44,10 @@ class Game {
 
   /** Units per second - default value used at the beginning of each round */
   initialVelocity = 4;
+  inputQueue: {
+    player: Player;
+    move: Move;
+  }[] = [];
 
   ball = {
     /** Ball radius in game units */
@@ -59,15 +73,15 @@ class Game {
 
   /** Position of the player's padles in the playable game area */
   playerPosition = {
-    p1: 0,
-    p2: 0,
+    [Player.P1]: 0,
+    [Player.P2]: 0,
   }
 
   ballDirection: 'left' | 'right' = 'right';
   
   score = {
-    p1: 0,
-    p2: 0,
+    [Player.P1]: 0,
+    [Player.P2]: 0,
     max: 10,
   }
 
@@ -79,12 +93,15 @@ class Game {
   constructor() {
     this.initCanvas();
     this.initGameState();
+    this.initEventHandlers();
 
     let playing = true;
     const gameLoop = () => {
+      // Update game state
       this.update();
+      // Re-render the game world
       this.render();
-      
+
       if (playing) {
         return window.requestAnimationFrame(gameLoop);
       }
@@ -101,8 +118,8 @@ class Game {
     const middleY = this.board.height / 2;
 
     // Set up player positions
-    this.playerPosition.p1 = middleY;
-    this.playerPosition.p2 = middleY;
+    this.playerPosition[Player.P1] = middleY;
+    this.playerPosition[Player.P2] = middleY;
 
     // Set initial ball position (middle)
     this.ball.x = middleX;
@@ -123,8 +140,8 @@ class Game {
     this.ctx.font = `${this.fontSize}px monospace`;
   }
 
-  bindEventHandlers() {
-
+  initEventHandlers() {
+    this.inputQueue = [];
   }
 
   update() {
@@ -163,14 +180,14 @@ class Game {
         /** Multiply by -1 to convert from cartisian to canvas coordinates */
         const collisionY = Math.tan(this.ball.angle) * -1 * ((this.board.width - this.ball.size) - this.ball.x) + this.ball.y;
 
-        if (this.padleCollisionCheck(this.playerPosition.p2, collisionY)) {
+        if (this.padleCollisionCheck(this.playerPosition[Player.P2], collisionY)) {
           // Intersect with the right edge of the board
           const overshoot = projectedX + this.ball.size - this.board.width;
           projectedX = this.board.width - this.ball.size - overshoot;
           this.ball.angle = mirrorY(this.ball.angle);
           this.ball.velocity *= 1.1;
         } else {
-          return this.endVolley('p1');
+          return this.endVolley(Player.P1);
         }
       }
     } else {
@@ -179,14 +196,14 @@ class Game {
         /** Multiply by -1 to convert from cartisian to canvas coordinates */
         const collisionY = Math.tan(this.ball.angle) * -1 * ((0 + this.ball.size) - this.ball.x) + this.ball.y;
 
-        if (this.padleCollisionCheck(this.playerPosition.p1, collisionY)) {
+        if (this.padleCollisionCheck(this.playerPosition[Player.P1], collisionY)) {
           // Ball hit the paddle, reflect!
           const overshoot = projectedX - this.ball.size
           projectedX = 0 - overshoot + this.ball.size;
           this.ball.angle = mirrorY(this.ball.angle);
-          this.ball.velocity *= 1.1;
+          this.ball.velocity *= 1.05;
         } else {
-          return this.endVolley('p2');
+          return this.endVolley(Player.P2);
         }
       }
     }
@@ -202,17 +219,17 @@ class Game {
     return ballY > padleTop && ballY < padleBottom;
   }
 
-  endVolley(winner: 'p1' | 'p2') {
+  endVolley(winner: Player) {
     this.updateScore(winner);
     this.resetGameObjectPosition();
   }
 
-  updateScore(winner: 'p1' | 'p2') {
+  updateScore(winner: Player) {
     this.score[winner] += 1;
     if (this.score[winner] === this.score.max) {
 
-      this.score.p1 = 0;
-      this.score.p2 = 0;
+      this.score[Player.P1] = 0;
+      this.score[Player.P2] = 0;
 
       this.resetGameObjectPosition();
     }
@@ -244,7 +261,7 @@ class Game {
     // player 1
     this.ctx.fillRect(
       this.board.xPadding - this.padle.width,
-      this.board.yPadding + this.playerPosition.p1 - this.padle.height / 2,
+      this.board.yPadding + this.playerPosition[Player.P1] - this.padle.height / 2,
 
       this.padle.width,
       this.padle.height
@@ -252,8 +269,8 @@ class Game {
 
     // player 2
     this.ctx.fillRect(
-      this.board.xPadding  + this.board.width,
-      this.board.yPadding + this.playerPosition.p2 - this.padle.height / 2 ,
+      this.board.xPadding + this.board.width,
+      this.board.yPadding + this.playerPosition[Player.P2] - this.padle.height / 2 ,
 
       this.padle.width,
       this.padle.height
@@ -301,13 +318,12 @@ class Game {
 
   drawScore() {
     this.ctx.fillStyle = 'gray';
-    /**  */
     const yOffset = this.board.yPadding + this.fontSize;
     const xOffset = this.board.xPadding + this.board.width / 2;
     this.ctx.textAlign = 'right';
-    this.ctx.fillText(this.score.p1.toString(), xOffset - this.fontSize/2, yOffset);
+    this.ctx.fillText(''+this.score[Player.P1], xOffset - this.fontSize/2, yOffset);
     this.ctx.textAlign = 'left';
-    this.ctx.fillText(this.score.p2.toString(), xOffset + this.fontSize/2, yOffset);
+    this.ctx.fillText(''+this.score[Player.P2], xOffset + this.fontSize/2, yOffset);
   }
 }
 
