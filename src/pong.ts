@@ -85,7 +85,7 @@ class Game {
   }
 
   ballDirection: 'left' | 'right' = 'right';
-  
+
   score = {
     [Player.P1]: 0,
     [Player.P2]: 0,
@@ -260,11 +260,11 @@ class Game {
         if (paddleCollisionPoint !== null) {
 
           const collisionScalar = (paddleCollisionPoint + this.ball.size) / (this.paddle.height + this.ball.size * 2);
-          
+
           // Ball hit the paddle, reflect!
           const overshoot = projectedX + this.ball.size - this.board.width;
           projectedX = this.board.width - this.ball.size - overshoot;
-          this.ball.angle = mirrorY(this.paddle.range * collisionScalar - this.paddle.range / 2); 
+          this.ball.angle = mirrorY(this.paddle.range * collisionScalar - this.paddle.range / 2);
 
           this.ball.velocity *= this.velocityScale;
         } else {
@@ -278,15 +278,15 @@ class Game {
         const collisionY = Math.tan(this.ball.angle) * -1 * ((0 + this.ball.size) - this.ball.x) + this.ball.y;
 
         const paddleCollisionPoint = this.paddleCollisionCheck(this.playerPosition[Player.P1], collisionY);
-        
+
         if (paddleCollisionPoint !== null) {
           const collisionScalar = (paddleCollisionPoint + this.ball.size) / (this.paddle.height + this.ball.size * 2);
-          
+
           // Ball hit the paddle, reflect!
           const overshoot = projectedX - this.ball.size
           projectedX = 0 - overshoot + this.ball.size;
-          this.ball.angle = this.paddle.range * collisionScalar - this.paddle.range / 2; 
-            
+          this.ball.angle = this.paddle.range * collisionScalar - this.paddle.range / 2;
+
           // this.ball.angle = mirrorY(this.ball.angle);
           this.ball.velocity *= this.velocityScale;
         } else {
@@ -302,12 +302,12 @@ class Game {
   paddleCollisionCheck(paddleY: number, ballY: number): number | null {
     const paddleTop = paddleY - this.paddle.height / 2 - this.ball.size;
     const paddleBottom = paddleY + this.paddle.height / 2 + this.ball.size;
-    
+
     if (ballY > paddleTop && ballY < paddleBottom) {
       return paddleBottom - ballY - this.ball.size;
     } else {
       return null;
-    } 
+    }
   }
 
   endVolley(winner: Player) {
@@ -336,7 +336,7 @@ class Game {
 
     const height = this.board.height + this.board.yPadding * 2;
     const width = this.board.width + this.board.xPadding * 2;
-    
+
     // Clear out the canvas
     // this.ctx.clearRect(0, 0, this.canvasEl.width, this.canvasEl.height);
 
@@ -350,7 +350,7 @@ class Game {
     this.drawScore();
     this.drawBall();
     this.drawPaddles();
-    
+
   }
 
   drawPaddles() {
@@ -377,7 +377,7 @@ class Game {
 
   drawBall() {
     this.ctx.fillStyle = 'white';
-    
+
     this.ctx.beginPath();
     this.ctx.arc(
       this.board.xPadding + this.ball.x,
@@ -387,7 +387,7 @@ class Game {
       0,
       2 * Math.PI
     );
-    
+
     this.ctx.fill();
   }
 
