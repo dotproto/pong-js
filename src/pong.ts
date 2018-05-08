@@ -1,6 +1,3 @@
-function toRadians (degrees: number) { return degrees * (Math.PI / 180);}
-function toDegrees (radians: number) { return radians * (180 / Math.PI);}
-
 enum Player {
   P1 = 'p1',
   P2 = 'p2',
@@ -23,9 +20,9 @@ const mirrorX = (radians:number) =>
 
 /** Reflect the input angle across the Y axis */
 const mirrorY = (radians:number) =>
-	radians < PI
-		? PI - radians
- 		: PI * 3 - radians;
+  radians < PI
+    ? PI - radians
+    : PI * 3 - radians;
 
 class Game {
 
@@ -171,10 +168,12 @@ class Game {
       // Player 1 keys
       if (key === 81 || key === 65) {
         this.pendingInputs[Player.P1] = key === 81 ? Move.UP : Move.DOWN;
+        return;
 
         // Player 2 keys
       } else if (key === 219 || key === 222) {
         this.pendingInputs[Player.P2] = key === 219 ? Move.UP : Move.DOWN;
+        return;
       }
     });
 
