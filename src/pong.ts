@@ -312,7 +312,7 @@ class Game {
 
   endVolley(winner: Player) {
     this.updateScore(winner);
-    if (winner = Player.P1) {
+    if (winner === Player.P1) {
       this.ball.angle = PI;
     } else {
       this.ball.angle = 0;
