@@ -63,7 +63,7 @@ class Game {
     /** Velocity used for the current round */
     velocity: this.velocityInitial,
     /** Degrees */
-    angle: 5 * PI / 17, // hits both paddles
+    angle: 0, // hits both paddles
     // angle: 2 * PI / 17, // misses right paddle
     // angle: 15 * PI / 17, // misses left paddle
     // angle: 1.45 * PI / 180, // a couple direct paddle hits
@@ -74,6 +74,8 @@ class Game {
     height: 40,
     width: 4,
     speed: 4,
+    /** Range of possible reflections */
+    range: PI * 3/4,
   };
 
   /** Position of the player's paddles in the playable game area */
@@ -115,16 +117,27 @@ class Game {
   }
 
   initGameState() {
-    this.resetGameObjectPosition();
+    this.initGameObjectPosition();
   }
 
-  resetGameObjectPosition() {
+  initGameObjectPosition() {
     const middleX = this.board.width / 2;
     const middleY = this.board.height / 2;
 
     // Set up player positions
     this.playerPosition[Player.P1] = middleY;
     this.playerPosition[Player.P2] = middleY;
+
+    // Set initial ball position (middle)
+    this.ball.x = middleX;
+    this.ball.y = middleY;
+
+    this.ball.velocity = this.velocityInitial;
+  }
+
+  resetGameObjectPosition() {
+    const middleX = this.board.width / 2;
+    const middleY = this.board.height / 2;
 
     // Set initial ball position (middle)
     this.ball.x = middleX;
@@ -147,7 +160,7 @@ class Game {
 
   initEventHandlers() {
     // P1: q (81) = up, a (65) = down
-    // P2: up arrow (38) = up, down arrow (40) = down
+    // P2: [ (219) = up, ' (222) = down
     document.addEventListener('keydown', event => {
       const key = event.which;
 
@@ -155,15 +168,13 @@ class Game {
         return;
       }
 
-      event.preventDefault();
-
       // Player 1 keys
       if (key === 81 || key === 65) {
         this.pendingInputs[Player.P1] = key === 81 ? Move.UP : Move.DOWN;
 
         // Player 2 keys
-      } else if (key === 38 || key === 40) {
-        this.pendingInputs[Player.P2] = key === 38 ? Move.UP : Move.DOWN;
+      } else if (key === 219 || key === 222) {
+        this.pendingInputs[Player.P2] = key === 219 ? Move.UP : Move.DOWN;
       }
     });
 
@@ -179,7 +190,7 @@ class Game {
         this.pendingInputs[Player.P1] = null;
 
         // Player 2 keys
-      } else if (key === 38 || key === 40) {
+      } else if (key === 219 || key === 222) {
         this.pendingInputs[Player.P2] = null;
       }
     });
@@ -245,11 +256,16 @@ class Game {
         /** Multiply by -1 to convert from cartisian to canvas coordinates */
         const collisionY = Math.tan(this.ball.angle) * -1 * ((this.board.width - this.ball.size) - this.ball.x) + this.ball.y;
 
-        if (this.paddleCollisionCheck(this.playerPosition[Player.P2], collisionY)) {
-          // Intersect with the right edge of the board
+        const paddleCollisionPoint = this.paddleCollisionCheck(this.playerPosition[Player.P2], collisionY);
+        if (paddleCollisionPoint !== null) {
+
+          const collisionScalar = (paddleCollisionPoint + this.ball.size) / (this.paddle.height + this.ball.size * 2);
+          
+          // Ball hit the paddle, reflect!
           const overshoot = projectedX + this.ball.size - this.board.width;
           projectedX = this.board.width - this.ball.size - overshoot;
-          this.ball.angle = mirrorY(this.ball.angle);
+          this.ball.angle = mirrorY(this.paddle.range * collisionScalar - this.paddle.range / 2); 
+
           this.ball.velocity *= this.velocityScale;
         } else {
           return this.endVolley(Player.P1);
@@ -261,11 +277,17 @@ class Game {
         /** Multiply by -1 to convert from cartisian to canvas coordinates */
         const collisionY = Math.tan(this.ball.angle) * -1 * ((0 + this.ball.size) - this.ball.x) + this.ball.y;
 
-        if (this.paddleCollisionCheck(this.playerPosition[Player.P1], collisionY)) {
+        const paddleCollisionPoint = this.paddleCollisionCheck(this.playerPosition[Player.P1], collisionY);
+        
+        if (paddleCollisionPoint !== null) {
+          const collisionScalar = (paddleCollisionPoint + this.ball.size) / (this.paddle.height + this.ball.size * 2);
+          
           // Ball hit the paddle, reflect!
           const overshoot = projectedX - this.ball.size
           projectedX = 0 - overshoot + this.ball.size;
-          this.ball.angle = mirrorY(this.ball.angle);
+          this.ball.angle = this.paddle.range * collisionScalar - this.paddle.range / 2; 
+            
+          // this.ball.angle = mirrorY(this.ball.angle);
           this.ball.velocity *= this.velocityScale;
         } else {
           return this.endVolley(Player.P2);
@@ -277,15 +299,24 @@ class Game {
     this.ball.y = projectedY;
   }
 
-  paddleCollisionCheck(paddleY: number, ballY: number) {
+  paddleCollisionCheck(paddleY: number, ballY: number): number | null {
     const paddleTop = paddleY - this.paddle.height / 2 - this.ball.size;
     const paddleBottom = paddleY + this.paddle.height / 2 + this.ball.size;
     
-    return ballY > paddleTop && ballY < paddleBottom;
+    if (ballY > paddleTop && ballY < paddleBottom) {
+      return paddleBottom - ballY - this.ball.size;
+    } else {
+      return null;
+    } 
   }
 
   endVolley(winner: Player) {
     this.updateScore(winner);
+    if (winner = Player.P1) {
+      this.ball.angle = PI;
+    } else {
+      this.ball.angle = 0;
+    }
     this.resetGameObjectPosition();
   }
 
