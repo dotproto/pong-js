@@ -1,3 +1,5 @@
+import { mirrorX, mirrorY, PI, TAU } from './trig';
+
 enum Player {
   P1 = 'p1',
   P2 = 'p2',
@@ -7,22 +9,6 @@ enum Move {
   UP = 'up',
   DOWN = 'down',
 }
-
-/** Math.PI is too long :( */
-  const PI = Math.PI;
-
-/** Math.PI * 2 is even longer. Plus we shouldn't re-calculate that value every time we need it */
-const TAU = Math.PI * 2;
-
-/** Reflect the input angle across the X axis */
-const mirrorX = (radians:number) =>
-    TAU - radians;
-
-/** Reflect the input angle across the Y axis */
-const mirrorY = (radians:number) =>
-  radians < PI
-    ? PI - radians
-    : PI * 3 - radians;
 
 class Game {
 
@@ -423,7 +409,6 @@ class Game {
     this.ctx.fillText(`${this.score[Player.P2]}`, xOffset + this.fontSize/2, yOffset);
   }
 }
-
 
 class Main {
 
