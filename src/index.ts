@@ -152,8 +152,8 @@ class Game {
       }
 
       // Player 1 keys
-      if (key === 81 || key === 65) {
-        this.pendingInputs[Player.P1] = key === 81 ? Move.UP : Move.DOWN;
+      if (key === 87 || key === 83) {
+        this.pendingInputs[Player.P1] = key === 87 ? Move.UP : Move.DOWN;
         return;
 
         // Player 2 keys
@@ -171,7 +171,7 @@ class Game {
       }
 
       // Player 1 keys
-      if (key === 81 || key === 65) {
+      if (key === 87 || key === 83) {
         this.pendingInputs[Player.P1] = null;
 
         // Player 2 keys
