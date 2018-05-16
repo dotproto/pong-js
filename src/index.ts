@@ -5,9 +5,9 @@ enum Player {
   P2 = 'p2',
 }
 
-enum Move {
-  UP = 'up',
-  DOWN = 'down',
+interface PlayerInput {
+  up: boolean;
+  down: boolean;
 }
 
 class Game {
@@ -30,11 +30,17 @@ class Game {
   velocityScale = 1.1;
 
   pendingInputs: {
-    [Player.P1]: Move | null,
-    [Player.P2]: Move | null,
+    [Player.P1]: PlayerInput,
+    [Player.P2]: PlayerInput,
   } = {
-    [Player.P1]: null,
-    [Player.P2]: null,
+    [Player.P1]: {
+      up: false,
+      down: false,
+    },
+    [Player.P2]: {
+      up: false,
+      down: false,
+    },
   }
 
   ball = {
@@ -151,15 +157,20 @@ class Game {
         return;
       }
 
-      // Player 1 keys
-      if (key === 81 || key === 65) {
-        this.pendingInputs[Player.P1] = key === 81 ? Move.UP : Move.DOWN;
-        return;
+      switch (key) {
+        // Player 1 keys
+        case 81:
+          return this.pendingInputs[Player.P1].up = true;
+        case 65:
+          return this.pendingInputs[Player.P1].down = true;
 
         // Player 2 keys
-      } else if (key === 219 || key === 222) {
-        this.pendingInputs[Player.P2] = key === 219 ? Move.UP : Move.DOWN;
-        return;
+        case 219:
+          return this.pendingInputs[Player.P2].up = true;
+        case 222:
+          return this.pendingInputs[Player.P2].down = true;
+        default:
+          // Unknown input
       }
     });
 
@@ -170,13 +181,20 @@ class Game {
         return;
       }
 
-      // Player 1 keys
-      if (key === 81 || key === 65) {
-        this.pendingInputs[Player.P1] = null;
+      switch (key) {
+        // Player 1 keys
+        case 81:
+          return this.pendingInputs[Player.P1].up = false;
+        case 65:
+          return this.pendingInputs[Player.P1].down = false;
 
         // Player 2 keys
-      } else if (key === 219 || key === 222) {
-        this.pendingInputs[Player.P2] = null;
+        case 219:
+          return this.pendingInputs[Player.P2].up = false;
+        case 222:
+          return this.pendingInputs[Player.P2].down = false;
+        default:
+          // Unknown input
       }
     });
   }
@@ -193,18 +211,18 @@ class Game {
     const maxHeight = this.board.height - this.paddle.height / 2;
 
     // Update P1
-    if (this.pendingInputs[Player.P1]) {
-      this.playerPosition[Player.P1] = this.pendingInputs[Player.P1] === Move.UP ?
-        Math.max(minHeight, -this.paddle.speed + this.playerPosition[Player.P1]) :
-        Math.min(maxHeight, this.paddle.speed + this.playerPosition[Player.P1]);
+    if (this.pendingInputs[Player.P1].up && !this.pendingInputs[Player.P1].down) {
+      this.playerPosition[Player.P1] = Math.max(minHeight, -this.paddle.speed + this.playerPosition[Player.P1]);
+    } else if (!this.pendingInputs[Player.P1].up && this.pendingInputs[Player.P1].down) {
+      this.playerPosition[Player.P1] = Math.min(maxHeight, this.paddle.speed + this.playerPosition[Player.P1]);
+    }
+    // Update P2
+    if (this.pendingInputs[Player.P2].up && !this.pendingInputs[Player.P2].down) {
+      this.playerPosition[Player.P2] = Math.max(minHeight, -this.paddle.speed + this.playerPosition[Player.P2])
+    } else if (!this.pendingInputs[Player.P2].up && this.pendingInputs[Player.P2].down) {
+      this.playerPosition[Player.P2] = Math.min(maxHeight, this.paddle.speed + this.playerPosition[Player.P2])
     }
 
-    // Update P2
-    if (this.pendingInputs[Player.P2]) {
-      this.playerPosition[Player.P2] = this.pendingInputs[Player.P2] === Move.UP ?
-        Math.max(minHeight, -this.paddle.speed + this.playerPosition[Player.P2]) :
-        Math.min(maxHeight, this.paddle.speed + this.playerPosition[Player.P2]);
-    }
   }
 
   updateBall() {
