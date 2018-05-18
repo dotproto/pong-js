@@ -1,3 +1,5 @@
+import * as tf from '@tensorflow/tfjs'
+
 enum Player {
   P1 = 'p1',
   P2 = 'p2',
@@ -23,6 +25,15 @@ const mirrorY = (radians:number) =>
   radians < PI
     ? PI - radians
     : PI * 3 - radians;
+
+
+class Agent {
+
+  constructor (actions:Move[]) {
+
+  }
+}
+
 
 class Game {
 
@@ -94,6 +105,8 @@ class Game {
   canvasEl: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
 
+  agent = new Agent([Move.UP, Move.DOWN]);
+
   constructor() {
     this.initCanvas();
     this.initGameState();
@@ -103,6 +116,7 @@ class Game {
     const gameLoop = () => {
       // Update game state
       this.update();
+      this.setState(this.agent); // should this go inside update function instead?
       // Re-render the game world
       this.render();
 
@@ -117,6 +131,10 @@ class Game {
     this.initGameObjectPosition();
   }
 
+  setState(agent:Agent) {
+
+  }
+ 
   initGameObjectPosition() {
     const middleX = this.board.width / 2;
     const middleY = this.board.height / 2;
