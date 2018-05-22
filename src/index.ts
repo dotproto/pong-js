@@ -1,4 +1,5 @@
 import { mirrorX, mirrorY, PI, TAU } from './trig';
+import { NaiveAi } from './naiveAi';
 
 enum Player {
   P1 = 'p1',
@@ -10,24 +11,32 @@ interface PlayerInput {
   down: boolean;
 }
 
-class Game {
+export interface GameState {
+  ballY: number;
+  ballAngle: number;
+  paddlePosition: number;
+}
+
+export class Game {
 
   /** Height and width units */
   board = {
     /** Height of the playable area */
-    height: 200,
+    height: 400,
     /** Width of the playable area */
-    width: 300,
+    width: 600,
     /** Padding on a single edge of the board */
     yPadding: 50,
     /** Size of each goal */
     xPadding: 50,
     boundarySize: 5,
-  }
+  };
+
+  private gameState: GameState;
 
   /** Units per second - default value used at the beginning of each round */
   velocityInitial = 4;
-  velocityScale = 1.1;
+  velocityScale = 1.05;
 
   pendingInputs: {
     [Player.P1]: PlayerInput,
@@ -73,8 +82,6 @@ class Game {
     [Player.P2]: 0,
   }
 
-  ballDirection: 'left' | 'right' = 'right';
-
   score = {
     [Player.P1]: 0,
     [Player.P2]: 0,
@@ -83,6 +90,7 @@ class Game {
 
   fontSize = 48;
 
+  ai: NaiveAi;
   canvasEl: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
 
@@ -91,8 +99,25 @@ class Game {
     this.initGameState();
     this.initEventHandlers();
 
+    const game = this;
+    this.gameState = Object.freeze({
+      get ballY(): number {
+        return game.ball.y;
+      },
+      get ballAngle(): number {
+        return game.ball.angle;
+      },
+      get paddlePosition(): number {
+        return game.playerPosition[Player.P2];
+      }
+    });
+
     let playing = true;
     const gameLoop = () => {
+      if (this.ai) {
+        this.ai.update();
+      }
+
       // Update game state
       this.update();
       // Re-render the game world
@@ -103,6 +128,10 @@ class Game {
       }
     };
     gameLoop();
+  }
+
+  setAi(aiInstance: NaiveAi) {
+    this.ai = aiInstance;
   }
 
   initGameState() {
@@ -160,15 +189,15 @@ class Game {
       switch (key) {
         // Player 1 keys
         case 81:
-          return this.pendingInputs[Player.P1].up = true;
+          return this.setP1InputUp(true);
         case 65:
-          return this.pendingInputs[Player.P1].down = true;
+          return this.setP1InputDown(true);
 
         // Player 2 keys
         case 219:
-          return this.pendingInputs[Player.P2].up = true;
+          return this.setP2InputUp(true);
         case 222:
-          return this.pendingInputs[Player.P2].down = true;
+          return this.setP2InputDown(true);
         default:
           // Unknown input
       }
@@ -184,19 +213,33 @@ class Game {
       switch (key) {
         // Player 1 keys
         case 81:
-          return this.pendingInputs[Player.P1].up = false;
+          return this.setP1InputUp(false);
         case 65:
-          return this.pendingInputs[Player.P1].down = false;
+          return this.setP1InputDown(false);
 
         // Player 2 keys
         case 219:
-          return this.pendingInputs[Player.P2].up = false;
+          return this.setP2InputUp(false);
         case 222:
-          return this.pendingInputs[Player.P2].down = false;
+          return this.setP2InputDown(false);
         default:
           // Unknown input
       }
     });
+  }
+
+  setP1InputUp(input: boolean = false) {
+    this.pendingInputs[Player.P1].up = input;
+  }
+  setP1InputDown(input: boolean = false) {
+    this.pendingInputs[Player.P1].down = input;
+  }
+
+  setP2InputUp(input: boolean = false) {
+    this.pendingInputs[Player.P2].up = input;
+  }
+  setP2InputDown(input: boolean = false) {
+    this.pendingInputs[Player.P2].down = input;
   }
 
   update() {
@@ -426,14 +469,20 @@ class Game {
     this.ctx.textAlign = 'left';
     this.ctx.fillText(`${this.score[Player.P2]}`, xOffset + this.fontSize/2, yOffset);
   }
+
+  getState(): GameState {
+    return this.gameState;
+  }
 }
 
 class Main {
 
   game: Game;
+  ai: NaiveAi;
 
   constructor() {
     this.game = new Game();
+    this.game.setAi(new NaiveAi(this.game));
   }
 
 }
