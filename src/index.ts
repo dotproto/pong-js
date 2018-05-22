@@ -37,6 +37,7 @@ export class Game {
   /** Units per second - default value used at the beginning of each round */
   velocityInitial = 4;
   velocityScale = 1.05;
+  velocityMax = 20;
 
   pendingInputs: {
     [Player.P1]: PlayerInput,
@@ -313,6 +314,9 @@ export class Game {
           this.ball.angle = mirrorY(this.paddle.range * collisionScalar - this.paddle.range / 2);
 
           this.ball.velocity *= this.velocityScale;
+          if (this.ball.velocity > this.velocityMax) {
+            this.ball.velocity = this.velocityMax;
+          }
         } else {
           return this.endVolley(Player.P1);
         }
