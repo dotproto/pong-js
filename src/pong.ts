@@ -1,5 +1,7 @@
-import * as tf from '@tensorflow/tfjs'
-
+import PGAgent from './agent'
+/** TODO: player needs to be either have the Agent interface or be a handler
+ *  that accepts input from a human.
+ */
 enum Player {
   P1 = 'p1',
   P2 = 'p2',
@@ -25,14 +27,6 @@ const mirrorY = (radians:number) =>
   radians < PI
     ? PI - radians
     : PI * 3 - radians;
-
-
-class Agent {
-
-  constructor (actions:Move[]) {
-
-  }
-}
 
 
 class Game {
@@ -105,7 +99,7 @@ class Game {
   canvasEl: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
 
-  agent = new Agent([Move.UP, Move.DOWN]);
+  agent = new PGAgent([Move.UP, Move.DOWN]);
 
   constructor() {
     this.initCanvas();
@@ -131,7 +125,7 @@ class Game {
     this.initGameObjectPosition();
   }
 
-  setState(agent:Agent) {
+  setState(agent:PGAgent) {
 
   }
  
