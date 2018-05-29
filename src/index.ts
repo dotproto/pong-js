@@ -13,8 +13,11 @@ interface PlayerInput {
 
 export interface GameState {
   ballY: number;
+  ballX: number;
   ballAngle: number;
-  paddlePosition: number;
+  ballVelocity: number;
+  playerPosition: number;
+  opponentPosition: number;
 }
 
 export class Game {
@@ -105,11 +108,20 @@ export class Game {
       get ballY(): number {
         return game.ball.y;
       },
+      get ballX(): number {
+        return game.ball.x;
+      },
       get ballAngle(): number {
         return game.ball.angle;
       },
-      get paddlePosition(): number {
+      get ballVelocity(): number {
+        return game.ball.velocity;
+      },
+      get playerPosition(): number {
         return game.playerPosition[Player.P2];
+      },
+      get opponentPosition(): number {
+        return game.playerPosition[Player.P1];
       }
     });
 
