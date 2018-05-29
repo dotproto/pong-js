@@ -89,7 +89,7 @@ export class Game {
     max: 10,
   }
 
-  fontSize = 48;
+  fontSize = 60;
 
   ai: NaiveAi;
   canvasEl: HTMLCanvasElement;
