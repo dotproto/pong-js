@@ -1,6 +1,5 @@
 import { mirrorX, mirrorY, PI, TAU } from './trig';
-import { NaiveAi } from './naiveAi';
-import { PGAgent, RandomAgent } from './agents';
+import { PGAgent, RandomAgent, ReflexAgent } from './agents/index';
 
 enum Player {
   P1 = 'p1',
@@ -92,7 +91,7 @@ export class Game {
 
   fontSize = 48;
 
-  ai: NaiveAi;
+  ai: ReflexAgent;
   canvasEl: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
 
@@ -132,7 +131,7 @@ export class Game {
     gameLoop();
   }
 
-  setAi(aiInstance: NaiveAi) {
+  setAi(aiInstance: ReflexAgent) {
     this.ai = aiInstance;
   }
 
@@ -483,11 +482,11 @@ export class Game {
 class Main {
 
   game: Game;
-  ai: NaiveAi;
+  ai: ReflexAgent;
 
   constructor() {
     this.game = new Game();
-    this.game.setAi(new NaiveAi(this.game));
+    this.game.setAi(new ReflexAgent(this.game));
   }
 
 }

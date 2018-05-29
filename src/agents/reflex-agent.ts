@@ -1,6 +1,6 @@
-import { Game, GameState } from "./index";
+import { Game, GameState } from "../index";
 
-export class NaiveAi {
+export class ReflexAgent {
   game: Game;
   state: GameState;
   chaseDistance = 10;

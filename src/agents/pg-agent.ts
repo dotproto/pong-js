@@ -1,5 +1,4 @@
-import * as tf from '@tensorflow/tfjs'
-import { Move } from './pong'
+import * as tf from "@tensorflow/tfjs";
 
 export class PGAgent {
   /** Hyperparameters */
@@ -27,7 +26,7 @@ export class PGAgent {
   //  switch to softmax to handle num actions > 2 
   output = tf.layers.dense({units: 1, activation: 'sigmoid'});
 
-  constructor(actions:Move[]) {
+  constructor() {
     /** build and compile the policy network */
     this.policy_net.add(this.hidden);
     this.policy_net.add(this.output);
@@ -36,7 +35,7 @@ export class PGAgent {
   }
 
   // paraphrased from karpathy. not sure if we need to reset G when batch_size = 1 game
-  discount(rewards, gamma) {
+  discount(rewards: tf.Tensor) {
     let discounted_rewards = tf.zerosLike(rewards);
     /** G is the cumulative discounted reward after time t */
     let G = 0.0;
@@ -54,21 +53,8 @@ export class PGAgent {
   }
 
   /** Return the best action for for the given state according to the policy */
-  take_action(state) {
+  take_action(state: tf.Tensor) {
     return this.policy_net.predict(state);
   }
 
-}
-
-
-export class RandomAgent {
-  actions = [];
-
-  constructor (actions:Move[]) {
-    this.actions = actions;
-  }
-  take_action(state) {
-    var choice = Math.floor(Math.random() * this.actions.length);
-    return this.actions[choice];
-  }
 }
