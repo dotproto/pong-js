@@ -144,8 +144,8 @@ export class Game {
     const middleY = this.board.height / 2;
 
     // Set up player positions
-    this.playerPosition[Player.P1] = middleY;
-    this.playerPosition[Player.P2] = middleY;
+    this.playerPosition[Player.P1] = middleY + 1;
+    this.playerPosition[Player.P2] = middleY + 1;
 
     // Set initial ball position (middle)
     this.ball.x = middleX;
