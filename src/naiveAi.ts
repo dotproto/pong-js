@@ -3,7 +3,7 @@ import { Game, GameState } from "./index";
 export class NaiveAi {
   game: Game;
   state: GameState;
-  chaseDistance = 10;
+  chaseDistance = 4;
 
   constructor(game: Game) {
     this.game = game;

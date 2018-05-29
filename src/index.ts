@@ -29,7 +29,7 @@ export class Game {
     yPadding: 50,
     /** Size of each goal */
     xPadding: 50,
-    boundarySize: 5,
+    boundarySize: 10,
   };
 
   private gameState: GameState;
@@ -55,7 +55,7 @@ export class Game {
 
   ball = {
     /** Ball radius in game units */
-    size: 4,
+    size: 7,
     /** Position of the ball in the playable board area */
     x: 0,
     y: 0,
@@ -70,8 +70,8 @@ export class Game {
   }
   /** Paddle height in game units */
   paddle = {
-    height: 40,
-    width: 4,
+    height: 60,
+    width: 8,
     speed: 4,
     /** Range of possible reflections */
     range: PI * 3/4,
