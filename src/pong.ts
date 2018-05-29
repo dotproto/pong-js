@@ -1,13 +1,11 @@
-import PGAgent from './agent'
-/** TODO: player needs to be either have the Agent interface or be a handler
- *  that accepts input from a human.
- */
+import { PGAgent, RandomAgent } from './agents'
+
 enum Player {
   P1 = 'p1',
   P2 = 'p2',
 }
 
-enum Move {
+export enum Move {
   UP = 'up',
   DOWN = 'down',
 }
