@@ -36,8 +36,9 @@ export class PGAgent {
 
   // paraphrased from karpathy. not sure if we need to reset G (line 47) when batch_size = 1 game
   discount_rewards(rewards: Array<number>) {
-    let discounted_rewards: Array<number> = Array(rewards.length);
-    this.discount_rewards.fill(0); // huh?
+    let discounted_rewards: Array<number> = Array.apply(null, Array(rewards.length)).map(() => 0);
+    // discounted_rewards.fill(0); throws an error...because we're targeting es5?
+    discounted_rewards.map(() => 0);
     /** G is the `return` the cumulative discounted reward after time t */
     let G = 0.0;
     // loop from rewards.size to 0
