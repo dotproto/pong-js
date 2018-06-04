@@ -10,7 +10,7 @@ export class PGAgent {
   hidden_units = 25;
 
   // The numbers here are placeholders because i dont know a better way.
-  // update tf.variable.assign
+  // update with tf.variable.assign
   state_history = tf.variable(tf.zeros([6]));
   action_history = tf.variable(tf.zeros([1]));
   reward_history = tf.variable(tf.zeros([1]));
@@ -19,7 +19,7 @@ export class PGAgent {
   policy_net = tf.sequential();
   /** hidden layer of the policy net */
   //  TODOs:
-  //    h.config.inputShape = State.shape
+  //    hidden.config.inputShape = State.shape
   //    State.shape = paddleLen + paddlePos*2 + ballPos(x, y) + ballV, + ballRad
   hidden = tf.layers.dense({units: this.hidden_units, activation: 'relu', inputShape: [6]});
   /** outputs the best action for the observed prior state */
@@ -34,16 +34,24 @@ export class PGAgent {
     this.policy_net.compile({loss: 'logLoss', optimizer: tf.train.adam(this.alpha)});
   }
 
-  // paraphrased from karpathy. not sure if we need to reset G when batch_size = 1 game
-  discount(rewards: tf.Tensor) {
-    let discounted_rewards = tf.zerosLike(rewards);
-    /** G is the cumulative discounted reward after time t */
+  // paraphrased from karpathy. not sure if we need to reset G (line 47) when batch_size = 1 game
+  discount_rewards(rewards: Array<number>) {
+    let discounted_rewards: Array<number> = Array(rewards.length);
+    this.discount_rewards.fill(0); // huh?
+    /** G is the `return` the cumulative discounted reward after time t */
     let G = 0.0;
     // loop from rewards.size to 0
-    //   if rewards[t] != 0 then set G = 0 (pong specific)
-    //   G = G * gamma + rewards[t]
-    //   discounted_rewards[t] = G
-    
+    for (let t = rewards.length; t >= 0; t--) {
+      // from karpathy blog:  reset the sum, since this was a game boundary (pong specific!)
+      // that might be specific to the way ai-gym handles the rewards. 
+      if (rewards[t] != 0 ) {
+        G = 0.0;
+      }
+        G = G * this.gamma + rewards[t];
+        discounted_rewards[t] = G
+    }
+    // TODO/QUESTION: discounted_rewards has to be converted into a tensor before
+    // it can be used for fit/train. convert before returning or after?
     return discounted_rewards;
   }
 
@@ -53,7 +61,7 @@ export class PGAgent {
   }
 
   /** Return the best action for for the given state according to the policy */
-  take_action(state: tf.Tensor) {
+  next_action(state: tf.Tensor) {
     return this.policy_net.predict(state);
   }
 
