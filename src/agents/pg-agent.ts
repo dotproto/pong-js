@@ -22,15 +22,15 @@ export class PGAgent {
   //    hidden.config.inputShape = State.shape
   //    State.shape = paddleLen + paddlePos*2 + ballPos(x, y) + ballV, + ballRad
   hidden = tf.layers.dense({units: this.hidden_units, activation: 'relu', inputShape: [6]});
-  /** outputs the best action for the observed prior state */
-  //  switch to softmax to handle num actions > 2 
+  /** outputs the highest probability action given the observed prior state */
+  //  switch to softmax to handle num actions > 2
   output = tf.layers.dense({units: 1, activation: 'sigmoid'});
-
   constructor() {
     /** build and compile the policy network */
     this.policy_net.add(this.hidden);
     this.policy_net.add(this.output);
 
+    // NOTE: try vanilla logLoss first but we may need a custom loss function.
     this.policy_net.compile({loss: 'logLoss', optimizer: tf.train.adam(this.alpha)});
   }
 
@@ -38,7 +38,6 @@ export class PGAgent {
   discount_rewards(rewards: Array<number>) {
     let discounted_rewards: Array<number> = Array.apply(null, Array(rewards.length)).map(() => 0);
     // discounted_rewards.fill(0); throws an error...because we're targeting es5?
-    discounted_rewards.map(() => 0);
     /** G is the `return` the cumulative discounted reward after time t */
     let G = 0.0;
     // loop from rewards.size to 0
@@ -51,8 +50,7 @@ export class PGAgent {
         G = G * this.gamma + rewards[t];
         discounted_rewards[t] = G
     }
-    // TODO/QUESTION: discounted_rewards has to be converted into a tensor before
-    // it can be used for fit/train. convert before returning or after?
+    // TODO: convert to tensor
     return discounted_rewards;
   }
 
