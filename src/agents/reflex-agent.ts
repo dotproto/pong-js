@@ -10,7 +10,7 @@ export class ReflexAgent {
     this.state = game.getState();
   }
 
-  update() {
+  next_action() {
     this.game.setP2InputUp(false);
     this.game.setP2InputDown(false);
 

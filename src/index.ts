@@ -1,3 +1,4 @@
+import * as tf from "@tensorflow/tfjs";
 import { mirrorX, mirrorY, PI, TAU } from './trig';
 import { PGAgent, RandomAgent, ReflexAgent } from './agents/index';
 
@@ -92,6 +93,7 @@ export class Game {
   fontSize = 48;
 
   ai: ReflexAgent;
+  agent1: PGAgent;
   canvasEl: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
 
@@ -116,7 +118,10 @@ export class Game {
     let playing = true;
     const gameLoop = () => {
       if (this.ai) {
-        this.ai.update();
+        this.ai.next_action();
+      }
+      if (this.agent1) {
+        this.agent1.next_action(game.getStateTensor());
       }
 
       // Update game state
@@ -133,6 +138,10 @@ export class Game {
 
   setAi(aiInstance: ReflexAgent) {
     this.ai = aiInstance;
+  }
+
+  setAgent1(agent1Instance: PGAgent) {
+    this.agent1 = agent1Instance;
   }
 
   initGameState() {
@@ -477,18 +486,27 @@ export class Game {
   getState(): GameState {
     return this.gameState;
   }
+
+  getStateTensor(): tf.Tensor {
+    const stateVals = (<any>Object).values(this.getState());
+    const stateTensor =  tf.tensor2d(stateVals, [1, stateVals.length]);
+    return stateTensor;
+  }
 }
 
 class Main {
 
   game: Game;
+  
+  agent1: PGAgent;
+  // agent2: ReflexAgent;
   ai: ReflexAgent;
 
   constructor() {
     this.game = new Game();
     this.game.setAi(new ReflexAgent(this.game));
+    this.game.setAgent1(new PGAgent(this.game));
   }
-
 }
 
 const main = new Main();

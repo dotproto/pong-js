@@ -1,31 +1,33 @@
 import { Game, GameState } from "../index";
 
 export class RandomAgent {
-    game: Game;
-    state: GameState;
+  game: Game;
+  state: GameState;
 
-    actions = [
-        // up
-        () => {
-            this.game.setP2InputUp(true);
-            this.game.setP2InputDown(false);
-        },
-        // dont move
-        () => {
-            this.game.setP2InputUp(false);
-            this.game.setP2InputDown(false);
-        },
-        // down
-        () => {
-            this.game.setP2InputUp(false);
-            this.game.setP2InputDown(true);
-        }
-    ]
+  actions = [
+    // up
+    () => {
+        this.game.setP1InputUp(true);
+        this.game.setP1InputDown(false);
+    },
+    // hold
+    () => {
+        this.game.setP1InputUp(false);
+        this.game.setP1InputDown(false);
+    },
+    // down
+    () => {
+        this.game.setP1InputUp(false);
+        this.game.setP1InputDown(true);
+    }
+  ]
 
-    constructor () {
-    }
-    take_action() {
-      var choice = Math.floor(Math.random() * this.actions.length);
-      return this.actions[choice];
-    }
+  constructor (game: Game) {
+    this.game = game;
+    this.state = game.getState();
   }
+  next_action() {
+    var choice = Math.floor(Math.random() * this.actions.length);
+    this.actions[choice]();
+  }
+}
