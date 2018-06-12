@@ -38,7 +38,7 @@ export class Game {
   private gameState: GameState;
 
   /** Units per second - default value used at the beginning of each round */
-  velocityInitial = 4;
+  velocityInitial = 5;
   velocityScale = 1.05;
   velocityMax = 20;
 
@@ -325,10 +325,7 @@ export class Game {
           projectedX = this.board.width - this.ball.size - overshoot;
           this.ball.angle = mirrorY(this.paddle.range * collisionScalar - this.paddle.range / 2);
 
-          this.ball.velocity *= this.velocityScale;
-          if (this.ball.velocity > this.velocityMax) {
-            this.ball.velocity = this.velocityMax;
-          }
+          this.increaseVelocity();
         } else {
           return this.endVolley(Player.P1);
         }
@@ -349,8 +346,7 @@ export class Game {
           projectedX = 0 - overshoot + this.ball.size;
           this.ball.angle = this.paddle.range * collisionScalar - this.paddle.range / 2;
 
-          // this.ball.angle = mirrorY(this.ball.angle);
-          this.ball.velocity *= this.velocityScale;
+          this.increaseVelocity();
         } else {
           return this.endVolley(Player.P2);
         }
@@ -359,6 +355,13 @@ export class Game {
 
     this.ball.x = projectedX;
     this.ball.y = projectedY;
+  }
+
+  increaseVelocity(): void {
+    this.ball.velocity *= this.velocityScale;
+    if (this.ball.velocity > this.velocityMax) {
+      this.ball.velocity = this.velocityMax;
+    }
   }
 
   paddleCollisionCheck(paddleY: number, ballY: number): number | null {
@@ -416,6 +419,28 @@ export class Game {
   }
 
   drawPaddles() {
+
+    this.ctx.fillStyle = '#444';
+
+    // P1 (left) background
+    this.ctx.fillRect(
+      this.board.xPadding - this.paddle.width,
+      this.board.yPadding,
+
+      this.paddle.width,
+      this.board.height
+    );
+
+    // P2 (right) background
+    this.ctx.fillRect(
+      this.board.xPadding + this.board.width,
+      this.board.yPadding,
+
+      this.paddle.width,
+      this.board.height
+    );
+
+
     this.ctx.fillStyle = 'white';
 
     // player 1
