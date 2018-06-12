@@ -14,8 +14,11 @@ interface PlayerInput {
 
 export interface GameState {
   ballY: number;
+  ballX: number;
   ballAngle: number;
-  paddlePosition: number;
+  ballVelocity: number;
+  playerPosition: number;
+  opponentPosition: number;
 }
 
 export class Game {
@@ -30,7 +33,7 @@ export class Game {
     yPadding: 50,
     /** Size of each goal */
     xPadding: 50,
-    boundarySize: 5,
+    boundarySize: 10,
   };
 
   private gameState: GameState;
@@ -56,7 +59,7 @@ export class Game {
 
   ball = {
     /** Ball radius in game units */
-    size: 4,
+    size: 7,
     /** Position of the ball in the playable board area */
     x: 0,
     y: 0,
@@ -71,8 +74,8 @@ export class Game {
   }
   /** Paddle height in game units */
   paddle = {
-    height: 40,
-    width: 4,
+    height: 60,
+    width: 8,
     speed: 4,
     /** Range of possible reflections */
     range: PI * 3/4,
@@ -90,7 +93,7 @@ export class Game {
     max: 10,
   }
 
-  fontSize = 48;
+  fontSize = 60;
 
   ai: ReflexAgent;
   agent1: PGAgent;
@@ -107,11 +110,20 @@ export class Game {
       get ballY(): number {
         return game.ball.y;
       },
+      get ballX(): number {
+        return game.ball.x;
+      },
       get ballAngle(): number {
         return game.ball.angle;
       },
-      get paddlePosition(): number {
+      get ballVelocity(): number {
+        return game.ball.velocity;
+      },
+      get playerPosition(): number {
         return game.playerPosition[Player.P2];
+      },
+      get opponentPosition(): number {
+        return game.playerPosition[Player.P1];
       }
     });
 
@@ -153,8 +165,8 @@ export class Game {
     const middleY = this.board.height / 2;
 
     // Set up player positions
-    this.playerPosition[Player.P1] = middleY;
-    this.playerPosition[Player.P2] = middleY;
+    this.playerPosition[Player.P1] = middleY + 1;
+    this.playerPosition[Player.P2] = middleY + 1;
 
     // Set initial ball position (middle)
     this.ball.x = middleX;
