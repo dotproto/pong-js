@@ -17,8 +17,10 @@ export interface GameState {
   ballX: number;
   ballAngle: number;
   ballVelocity: number;
-  playerPosition: number;
-  opponentPosition: number;
+  player1Position: number;
+  player2Position: number;
+  player1Score: number;
+  player2Score: number;
 }
 
 export class Game {
@@ -119,12 +121,18 @@ export class Game {
       get ballVelocity(): number {
         return game.ball.velocity;
       },
-      get playerPosition(): number {
+      get player1Position(): number {
+        return game.playerPosition[Player.P1];
+      },
+      get player2Position(): number {
         return game.playerPosition[Player.P2];
       },
-      get opponentPosition(): number {
-        return game.playerPosition[Player.P1];
-      }
+      get player1Score(): number {
+        return game.score[Player.P1];
+      },  
+      get player2Score(): number {
+        return game.score[Player.P2];
+      },
     });
 
     let playing = true;
@@ -133,11 +141,14 @@ export class Game {
         this.ai.next_action();
       }
       if (this.agent1) {
-        this.agent1.next_action(game.getStateTensor());
+        this.agent1.next_action(this.getStateTensor());
       }
 
+      const priorState = {...this.gameState}
       // Update game state
       this.update();
+      // get state diff
+      this.diffState(priorState, this.gameState)
       // Re-render the game world
       this.render();
 
@@ -493,6 +504,22 @@ export class Game {
     this.ctx.fillText(`${this.score[Player.P1]}`, xOffset - this.fontSize/2, yOffset);
     this.ctx.textAlign = 'left';
     this.ctx.fillText(`${this.score[Player.P2]}`, xOffset + this.fontSize/2, yOffset);
+  }
+
+  diffState(priorState: GameState, currentState: GameState) {
+    if (priorState.player1Score < currentState.player1Score) {
+      return 1;
+    } else if (priorState.player2Score < currentState.player2Score) {
+      return -1;
+      // if the balling was moving left...
+    } else if (priorState.ballAngle > 0.5 * PI && priorState.ballAngle < 1.5 * PI ) {
+      // and now its moving right...
+      if (currentState.ballAngle < 0.5 * PI || currentState.ballAngle > 1.5 * PI) {
+        return 1;
+      }
+    } else {
+      return 0;
+    }
   }
 
   getState(): GameState {

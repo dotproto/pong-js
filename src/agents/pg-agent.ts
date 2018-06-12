@@ -34,7 +34,7 @@ export class PGAgent {
 
   // The numbers here are placeholders because i dont know a better way.
   // update with tf.variable.assign
-  state_history = tf.variable(tf.zeros([3]));
+  state_history = tf.variable(tf.zeros([6]));
   action_history = tf.variable(tf.zeros([1]));
   reward_history = tf.variable(tf.zeros([1]));
 
@@ -47,7 +47,7 @@ export class PGAgent {
   hidden = tf.layers.dense({
     units: this.hidden_units, 
     activation: 'relu', 
-    inputShape: [3],
+    inputShape: [6],
     kernelInitializer: 'glorotUniform',
     name: 'hidden'
   });
@@ -95,7 +95,7 @@ export class PGAgent {
   /** Stochastically determine the next action for the given state according to the policy */
   next_action(state: tf.Tensor) {
     // set the output layer's activation to softmax and use tf.argmax() to handle more than 2 actions
-    const prediction = this.policy_net.predict(state, {batchSize: 1})
+    const prediction = this.policy_net.predict(state, {batchSize: 1}) as tf.Tensor;
     prediction.print(true)
     const output = prediction.squeeze().dataSync()[0]
     const choice = Math.random() < output ? 1 : 0;
