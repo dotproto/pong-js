@@ -141,14 +141,20 @@ export class Game {
         this.ai.next_action();
       }
       if (this.agent1) {
-        this.agent1.next_action(this.getStateTensor());
+        this.agent1.nextAction(this.getStateTensor());
       }
-
+      
       const priorState = {...this.gameState}
       // Update game state
       this.update();
-      // get state diff
-      this.diffState(priorState, this.gameState)
+      // train the agent asynchronously
+      if (this.agent1) {
+        // calculate reward
+        const currentReward = this.calculateReward(priorState, this.gameState);
+        this.agent1.updateRewardHistory(currentReward);
+        this.agent1.updateStateHistory(this.getStateTensor());
+        this.agent1.train();
+      }
       // Re-render the game world
       this.render();
 
@@ -506,7 +512,7 @@ export class Game {
     this.ctx.fillText(`${this.score[Player.P2]}`, xOffset + this.fontSize/2, yOffset);
   }
 
-  diffState(priorState: GameState, currentState: GameState) {
+  calculateReward(priorState: GameState, currentState: GameState) {
     if (priorState.player1Score < currentState.player1Score) {
       return 1;
     } else if (priorState.player2Score < currentState.player2Score) {

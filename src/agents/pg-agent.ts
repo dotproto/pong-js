@@ -1,7 +1,7 @@
 import * as tf from "@tensorflow/tfjs";
 import { Game, GameState } from "../index";
 
-/** 
+/**
  * A reinforcement learning agent that uses a policy gradient to play pong.
  * The policy representation is a simple two layer neural net with 1 hidden layer
  * of 25 relu nodes and a sigmoid output layer.
@@ -30,24 +30,24 @@ export class PGAgent {
   /** Discount factor - */
   gamma = 0.99;
   /** size of the policy network's hidden layer */
-  hidden_units = 25;
+  hiddenUnits = 25;
 
   // The numbers here are placeholders because i dont know a better way.
   // update with tf.variable.assign
-  state_history = tf.variable(tf.zeros([6]));
-  action_history = tf.variable(tf.zeros([1]));
-  reward_history = tf.variable(tf.zeros([1]));
+  stateHistory = tf.zeros([1, 8]);
+  actionHistory = tf.zeros([1]);
+  rewardHistory = tf.zeros([1]);
 
   /** Policy network - outputs the probability of an action given the current state */
-  policy_net = tf.sequential();
+  policyNet = tf.sequential();
   /** hidden layer of the policy net */
   //  TODOs:
   //    hidden.config.inputShape = State.shape
   //    State.shape = paddleLen + paddlePos*2 + ballPos(x, y) + ballV, + ballRad
   hidden = tf.layers.dense({
-    units: this.hidden_units, 
+    units: this.hiddenUnits, 
     activation: 'relu', 
-    inputShape: [6],
+    inputShape: [8],
     kernelInitializer: 'glorotUniform',
     name: 'hidden'
   });
@@ -60,16 +60,30 @@ export class PGAgent {
     this.state = game.getStateTensor();
 
     // build and compile the policy network
-    this.policy_net.add(this.hidden);
-    this.policy_net.add(this.output);
+    this.policyNet.add(this.hidden);
+    this.policyNet.add(this.output);
 
     // NOTE: try vanilla logLoss first but may need a custom loss function.
-    this.policy_net.compile({optimizer: tf.train.adam(this.alpha), loss: tf.losses.logLoss});
+    this.policyNet.compile({optimizer: tf.train.adam(this.alpha), loss: tf.losses.logLoss});
+  }
+
+  updateRewardHistory(reward: number) {
+    const latestReward = tf.tensor1d([reward]);
+    this.rewardHistory = this.rewardHistory.concat(latestReward);
+  }
+
+  updateStateHistory(state: tf.Tensor) {
+    this.stateHistory = this.stateHistory.concat(state);
+  }
+
+  updateActionHistory(action: number) {
+    const latestAction = tf.tensor1d([action]);
+    this.actionHistory = this.actionHistory.concat(latestAction);
   }
 
   // paraphrased from karpathy. not sure if we need to reset G (line 47) when batch_size = 1 game
-  discount_rewards(rewards: Array<number>) {
-    let discounted_rewards: Array<number> = Array.apply(null, Array(rewards.length)).map(() => 0);
+  discountRewards(rewards: Array<number>) {
+    let discountedRewards: Array<number> = Array.apply(null, Array(rewards.length)).map(() => 0);
     // discounted_rewards.fill(0); throws an error...because we're targeting es5?
     /** G is the `return` the cumulative discounted reward after time t */
     let G = 0.0;
@@ -81,21 +95,21 @@ export class PGAgent {
         G = 0.0;
       }
         G = G * this.gamma + rewards[t];
-        discounted_rewards[t] = G
+        discountedRewards[t] = G
     }
     // TODO: convert to tensor
-    return discounted_rewards;
+    return discountedRewards;
   }
 
   /** ... */
   async train() {
-    await this.policy_net.fit(this.action_history, this.reward_history);
+    await this.policyNet.fit(this.actionHistory, this.rewardHistory);
   }
 
   /** Stochastically determine the next action for the given state according to the policy */
-  next_action(state: tf.Tensor) {
+  nextAction(state: tf.Tensor) {
     // set the output layer's activation to softmax and use tf.argmax() to handle more than 2 actions
-    const prediction = this.policy_net.predict(state, {batchSize: 1}) as tf.Tensor;
+    const prediction = this.policyNet.predict(state, {batchSize: 1}) as tf.Tensor;
     prediction.print(true)
     const output = prediction.squeeze().dataSync()[0]
     const choice = Math.random() < output ? 1 : 0;
