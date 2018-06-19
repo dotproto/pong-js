@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/dotproto/pong-js#readme",
   "devDependencies": {
-    "typescript": "^2.9.1"
+    "typescript": "^2.9.2"
   },
   "dependencies": {
     "@tensorflow/tfjs": "^0.11.6",
