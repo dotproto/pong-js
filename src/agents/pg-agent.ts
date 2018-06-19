@@ -1,5 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
-import { Game, GameState } from "../index";
+import { Game } from "../index";
 
 /**
  * A reinforcement learning agent that uses a policy gradient to play pong.
@@ -10,7 +10,6 @@ import { Game, GameState } from "../index";
  */
 export class PGAgent {
   game: Game;
-  state: tf.Tensor;
 
   actions = [
     // up
@@ -32,11 +31,9 @@ export class PGAgent {
   /** size of the policy network's hidden layer */
   hiddenUnits = 25;
 
-  // The numbers here are placeholders because i dont know a better way.
-  // update with tf.variable.assign
-  stateHistory = tf.zeros([1, 8]);
-  actionHistory = tf.zeros([1]);
-  rewardHistory = tf.zeros([1]);
+  stateHistory: Array<Array<number>> = []; 
+  actionHistory: Array<number> = [];
+  rewardHistory: Array<number> = [];
 
   /** Policy network - outputs the probability of an action given the current state */
   policyNet = tf.sequential();
@@ -57,7 +54,6 @@ export class PGAgent {
 
   constructor(game: Game) {
     this.game = game;
-    this.state = game.getStateTensor();
 
     // build and compile the policy network
     this.policyNet.add(this.hidden);
@@ -68,51 +64,65 @@ export class PGAgent {
   }
 
   updateRewardHistory(reward: number) {
-    const latestReward = tf.tensor1d([reward]);
-    this.rewardHistory = this.rewardHistory.concat(latestReward);
+    this.rewardHistory.push(reward);
   }
 
-  updateStateHistory(state: tf.Tensor) {
-    this.stateHistory = this.stateHistory.concat(state);
+  updateStateHistory(state: Array<number>) {
+    this.stateHistory.push(state);
   }
 
   updateActionHistory(action: number) {
-    const latestAction = tf.tensor1d([action]);
-    this.actionHistory = this.actionHistory.concat(latestAction);
+    this.actionHistory.push(action);
   }
 
-  // paraphrased from karpathy. not sure if we need to reset G (line 47) when batch_size = 1 game
   discountRewards(rewards: Array<number>) {
     let discountedRewards: Array<number> = Array.apply(null, Array(rewards.length)).map(() => 0);
-    // discounted_rewards.fill(0); throws an error...because we're targeting es5?
+    // discounted_rewards.fill(0); 
     /** G is the `return` the cumulative discounted reward after time t */
     let G = 0.0;
     // loop from rewards.size to 0
     for (let t = rewards.length; t >= 0; t--) {
-      // from karpathy blog:  reset the sum, since this was a game boundary (pong specific!)
-      // that might be specific to the way ai-gym handles the rewards. 
-      if (rewards[t] != 0 ) {
+      if (Math.abs(rewards[t]) === 10) {
         G = 0.0;
       }
         G = G * this.gamma + rewards[t];
-        discountedRewards[t] = G
+        discountedRewards[t] = G;
     }
-    // TODO: convert to tensor
     return discountedRewards;
   }
 
   /** ... */
   async train() {
-    await this.policyNet.fit(this.actionHistory, this.rewardHistory);
+    const x = tf.tidy(() => { 
+      const actionTensor = tf.tensor1d(this.actionHistory);
+      return tf.variable(actionTensor);
+    });
+    const y = tf.tidy(() => {
+      const rewardTensor = tf.tensor1d(this.rewardHistory);
+      return tf.variable(rewardTensor);
+    });
+    const response = await this.policyNet.fit(x, y);
+    console.log(response.history.loss[0]);
+    x.dispose();
+    y.dispose();
   }
 
   /** Stochastically determine the next action for the given state according to the policy */
-  nextAction(state: tf.Tensor) {
-    // set the output layer's activation to softmax and use tf.argmax() to handle more than 2 actions
-    const prediction = this.policyNet.predict(state, {batchSize: 1}) as tf.Tensor;
-    prediction.print(true)
-    const output = prediction.squeeze().dataSync()[0]
-    const choice = Math.random() < output ? 1 : 0;
-    this.actions[choice]();
+  nextAction(state: Array<number>) {
+      // set the output layer's activation to softmax and use tf.argmax() to handle more than 2 actions
+      const prediction = tf.tidy(() => {
+        const stateTensor = tf.tensor2d(state, [1, 8]);
+        return this.policyNet.predict(stateTensor, {batchSize: 1});
+      }) as tf.Tensor;
+      // prediction.print(true);
+      const action = tf.tidy(() => {
+        const output = prediction.squeeze().dataSync()[0];
+        return output;
+      })
+      // console.log(output);
+      const choice = Math.random() < action ? 1 : 0;
+      this.actions[choice]();
+      this.updateActionHistory(choice);
+      prediction.dispose();
   }
 }
