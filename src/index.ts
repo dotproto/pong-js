@@ -1,15 +1,8 @@
-import { mirrorX, mirrorY, PI, TAU } from './trig';
+import { GameState } from "./models/GameState";
+import { Player } from "./models/Player";
+import { PlayerInput } from "./models/PlayerInput";
 import { NaiveAi } from './naiveAi';
-
-enum Player {
-  P1 = 'p1',
-  P2 = 'p2',
-}
-
-interface PlayerInput {
-  up: boolean;
-  down: boolean;
-}
+import { mirrorX, mirrorY, PI } from './trig';
 
 export interface GameState {
   ballY: number;

@@ -1,4 +1,5 @@
-import { Game, GameState } from "./index";
+import { Game } from "./index";
+import { GameState } from "./models/GameState";
 
 export class NaiveAi {
   game: Game;
