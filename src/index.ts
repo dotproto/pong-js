@@ -1,22 +1,20 @@
+import { BallState } from "./models/BallState";
+import { BoardSettings } from "./models/BoardSettings";
 import { GameState } from "./models/GameState";
+import { PaddleSettings } from "./models/PaddleSettings";
 import { Player } from "./models/Player";
 import { PlayerInput } from "./models/PlayerInput";
+import { PlayerState } from "./models/PlayerState";
+import { PongRendererConfig } from "./models/PongRendererConfig";
+import { ScoreState } from "./models/ScoreState";
 import { NaiveAi } from './naiveAi';
+import { PongRenderer } from './PongRenderer';
 import { mirrorX, mirrorY, PI } from './trig';
-
-export interface GameState {
-  ballY: number;
-  ballX: number;
-  ballAngle: number;
-  ballVelocity: number;
-  playerPosition: number;
-  opponentPosition: number;
-}
 
 export class Game {
 
   /** Height and width units */
-  board = {
+  board: BoardSettings = {
     /** Height of the playable area */
     height: 400,
     /** Width of the playable area */
@@ -49,7 +47,7 @@ export class Game {
     },
   }
 
-  ball = {
+  ball: BallState = {
     /** Ball radius in game units */
     size: 7,
     /** Position of the ball in the playable board area */
@@ -65,7 +63,7 @@ export class Game {
 
   }
   /** Paddle height in game units */
-  paddle = {
+  paddle: PaddleSettings = {
     height: 60,
     width: 8,
     speed: 4,
@@ -74,12 +72,12 @@ export class Game {
   };
 
   /** Position of the player's paddles in the playable game area */
-  playerPosition = {
+  playerPosition: PlayerState = {
     [Player.P1]: 0,
     [Player.P2]: 0,
   }
 
-  score = {
+  score: ScoreState = {
     [Player.P1]: 0,
     [Player.P2]: 0,
     max: 10,
@@ -88,11 +86,19 @@ export class Game {
   fontSize = 60;
 
   ai: NaiveAi;
-  canvasEl: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
+  renderer: PongRenderer;
 
   constructor() {
-    this.initCanvas();
+    const rendererConfig: PongRendererConfig = {
+      board: this.board,
+      paddle: this.paddle,
+      scoreSize: this.fontSize,
+      playerPosition: this.playerPosition,
+      ball: this.ball,
+      score: this.score,
+    };
+
+    this.renderer = new PongRenderer(rendererConfig);
     this.initGameState();
     this.initEventHandlers();
 
@@ -127,7 +133,7 @@ export class Game {
       // Update game state
       this.update();
       // Re-render the game world
-      this.render();
+      this.renderer.render();
 
       if (playing) {
         return window.requestAnimationFrame(gameLoop);
@@ -168,18 +174,6 @@ export class Game {
     this.ball.y = middleY;
 
     this.ball.velocity = this.velocityInitial;
-  }
-
-  initCanvas() {
-    // Prep the canvas
-    this.canvasEl = document.getElementById('pong') as HTMLCanvasElement;
-
-    this.canvasEl.height = this.board.height + this.board.yPadding * 2;
-    this.canvasEl.width = this.board.width + this.board.xPadding * 2;
-
-    // Get the context for drawing
-    this.ctx = this.canvasEl.getContext('2d');
-    this.ctx.font = `${this.fontSize}px monospace`;
   }
 
   initEventHandlers() {
@@ -387,121 +381,6 @@ export class Game {
 
       this.resetGameObjectPosition();
     }
-  }
-
-  render() {
-    this.ctx.fillStyle = 'black';
-
-    const height = this.board.height + this.board.yPadding * 2;
-    const width = this.board.width + this.board.xPadding * 2;
-
-    // Clear out the canvas
-    // this.ctx.clearRect(0, 0, this.canvasEl.width, this.canvasEl.height);
-
-    // Draw the board background
-    // this.ctx.globalAlpha = 0.05;
-    this.ctx.fillRect(0, 0, width, height);
-    // this.ctx.globalAlpha = 1;
-
-    // Draw the game objects
-    this.drawBoundaries();
-    this.drawScore();
-    this.drawBall();
-    this.drawPaddles();
-
-  }
-
-  drawPaddles() {
-
-    this.ctx.fillStyle = '#444';
-
-    // P1 (left) background
-    this.ctx.fillRect(
-      this.board.xPadding - this.paddle.width,
-      this.board.yPadding,
-
-      this.paddle.width,
-      this.board.height
-    );
-
-    // P2 (right) background
-    this.ctx.fillRect(
-      this.board.xPadding + this.board.width,
-      this.board.yPadding,
-
-      this.paddle.width,
-      this.board.height
-    );
-
-
-    this.ctx.fillStyle = 'white';
-
-    // player 1
-    this.ctx.fillRect(
-      this.board.xPadding - this.paddle.width,
-      this.board.yPadding + this.playerPosition[Player.P1] - this.paddle.height / 2,
-
-      this.paddle.width,
-      this.paddle.height
-    );
-
-    // player 2
-    this.ctx.fillRect(
-      this.board.xPadding + this.board.width,
-      this.board.yPadding + this.playerPosition[Player.P2] - this.paddle.height / 2 ,
-
-      this.paddle.width,
-      this.paddle.height
-    );
-  }
-
-  drawBall() {
-    this.ctx.fillStyle = 'white';
-
-    this.ctx.beginPath();
-    this.ctx.arc(
-      this.board.xPadding + this.ball.x,
-      this.board.yPadding + this.ball.y,
-
-      this.ball.size,
-      0,
-      2 * Math.PI
-    );
-
-    this.ctx.fill();
-  }
-
-  drawBoundaries() {
-    this.ctx.fillStyle = 'white';
-    // Top edge
-    this.ctx.fillRect(
-      this.board.xPadding - this.board.boundarySize,
-      this.board.yPadding - this.board.boundarySize,
-
-      this.board.width + this.board.boundarySize * 2,
-      this.board.boundarySize
-    );
-
-
-    // Bottom edge
-    this.ctx.fillRect(
-      this.board.xPadding - this.board.boundarySize,
-      this.board.yPadding + this.board.height,
-
-      this.board.width + this.board.boundarySize * 2,
-      this.board.boundarySize
-    );
-
-  }
-
-  drawScore() {
-    this.ctx.fillStyle = 'gray';
-    const yOffset = this.board.yPadding + this.fontSize;
-    const xOffset = this.board.xPadding + this.board.width / 2;
-    this.ctx.textAlign = 'right';
-    this.ctx.fillText(`${this.score[Player.P1]}`, xOffset - this.fontSize/2, yOffset);
-    this.ctx.textAlign = 'left';
-    this.ctx.fillText(`${this.score[Player.P2]}`, xOffset + this.fontSize/2, yOffset);
   }
 
   getState(): GameState {
