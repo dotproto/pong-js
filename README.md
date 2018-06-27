@@ -1,3 +1,3 @@
 # Pong
 
-JS implimentation of a Pong game engine.
+JS implementation of a Pong game engine.
