@@ -26,7 +26,7 @@ export class RandomAgent {
     this.game = game;
     this.state = game.getState();
   }
-  next_action() {
+  nextAction(state: any) {
     var choice = Math.floor(Math.random() * this.actions.length);
     this.actions[choice]();
   }

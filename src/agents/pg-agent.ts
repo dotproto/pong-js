@@ -60,6 +60,9 @@ export class PGAgent {
     this.policyNet.add(this.output);
 
     // NOTE: try vanilla logLoss first but may need a custom loss function.
+    // QUESTION: does the model need to be compiled with an optimizer and loss function
+    // if we aren't using the built in model.train function? 
+    // does it need to be compiled at all?
     this.policyNet.compile({optimizer: tf.train.adam(this.alpha), loss: tf.losses.logLoss});
   }
 
@@ -92,7 +95,7 @@ export class PGAgent {
   }
 
   /** ... */
-  async train() {
+  train() {
     const x = tf.tidy(() => { 
       const actionTensor = tf.tensor1d(this.actionHistory);
       return tf.variable(actionTensor);
@@ -101,10 +104,8 @@ export class PGAgent {
       const rewardTensor = tf.tensor1d(this.rewardHistory);
       return tf.variable(rewardTensor);
     });
-    const response = await this.policyNet.fit(x, y);
-    console.log(response.history.loss[0]);
-    x.dispose();
-    y.dispose();
+      x.dispose();
+      y.dispose();
   }
 
   /** Stochastically determine the next action for the given state according to the policy */
@@ -124,5 +125,12 @@ export class PGAgent {
       this.actions[choice]();
       this.updateActionHistory(choice);
       prediction.dispose();
+      let temp = JSON.stringify(this.policyNet.getLayer('hidden').getWeights()[0].toString())
+      if (temp !== foo) {
+        console.log(temp);
+        foo = temp;
+      }
   }
 }
+
+let foo = '';
