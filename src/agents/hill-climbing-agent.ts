@@ -8,7 +8,7 @@ import { Game } from "../index";
  * TODO: talk about loss function and optimizer
  * TODO: hyperparameters
  */
-export class PGAgent {
+export class HillClimberAgent {
   game: Game;
   player: string;
   actions: any = {
