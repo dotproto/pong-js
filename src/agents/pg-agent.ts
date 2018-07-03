@@ -98,13 +98,18 @@ export class PGAgent {
       return tf.variable(stateTensor);
     });
     const y = tf.tidy(() => {
+      const actionTensor = tf.tensor1d(this.actionHistory.slice(0, -1));
+      return tf.variable(actionTensor);
+    });
+    const w = tf.tidy(() => {
       const rewardTensor = tf.tensor1d(this.rewardHistory);
       return tf.variable(rewardTensor);
     });
-    const response = await this.policyNet.fit(x, y);
+    const response = await this.policyNet.fit(x, y, {sampleWeight: w});
     console.log(response.history.loss[0]);
     x.dispose();
     y.dispose();
+    w.dispose();
   }
 
   /** Stochastically determine the next action for the given state according to the policy */
