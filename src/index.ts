@@ -143,17 +143,11 @@ export class Game {
       if (this.agent1) {
         this.agent1.nextAction(this.getStateVals());
       }
-
-      const priorState = {...this.gameState}
       // Update game state
       this.update();
       // train the agent asynchronously
       if (this.agent1) {
         // calculate reward
-        const currentReward = this.calculateReward(priorState, this.gameState);
-        this.agent1.updateRewardHistory(currentReward);
-        this.agent1.updateStateHistory(this.getStateVals());
-
       }
       // Re-render the game world
       this.render();
@@ -407,9 +401,6 @@ export class Game {
       this.ball.angle = 0;
     }
     this.resetGameObjectPosition();
-    if (this.agent1) {
-      this.agent1.train();
-    }
   }
 
   updateScore(winner: Player) {
