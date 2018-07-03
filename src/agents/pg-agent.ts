@@ -94,8 +94,8 @@ export class PGAgent {
   /** ... */
   async train() {
     const x = tf.tidy(() => { 
-      const actionTensor = tf.tensor1d(this.actionHistory);
-      return tf.variable(actionTensor);
+      const stateTensor = tf.tensor2d(this.stateHistory);
+      return tf.variable(stateTensor);
     });
     const y = tf.tidy(() => {
       const rewardTensor = tf.tensor1d(this.rewardHistory);
