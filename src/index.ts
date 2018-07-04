@@ -259,20 +259,6 @@ export class Game {
     this.pendingInputs[player].down = input;
   }
 
-  setP1InputUp(input: boolean = false) {
-    this.pendingInputs[P1].up = input;
-  }
-  setP1InputDown(input: boolean = false) {
-    this.pendingInputs[P1].down = input;
-  }
-
-  setP2InputUp(input: boolean = false) {
-    this.pendingInputs[P2].up = input;
-  }
-  setP2InputDown(input: boolean = false) {
-    this.pendingInputs[P2].down = input;
-  }
-
   update() {
     this.updatePaddles();
     this.updateBall();
