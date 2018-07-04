@@ -128,10 +128,10 @@ export class Game {
     });
 
     let playing = true;
-    const setInput = this.setInput.bind(this);
+    const setP2Input = this.setPlayerInput.bind(this, P2);
     const gameLoop = () => {
       if (this.ai) {
-        this.ai.update(this.gameState, setInput);
+        this.ai.update(this.gameState, setP2Input);
       }
 
       // Update game state
@@ -144,26 +144,6 @@ export class Game {
       }
     };
     gameLoop();
-  }
-
-  setInput(action: PlayerAction) {
-    switch (action) {
-      case up: {
-        this.setInputUp(P2, true);
-        this.setInputDown(P2, false);
-      } break;
-      case down: {
-        this.setInputUp(P2, false);
-        this.setInputDown(P2, true);
-      } break;
-      case stay: {
-        this.setInputUp(P2, false);
-        this.setInputDown(P2, false);
-      } break;
-      default: {
-        console.error('Unknown player action');
-      }
-    }
   }
 
   setAi(aiInstance: NaiveAi) {
@@ -252,9 +232,39 @@ export class Game {
     });
   }
 
+  setPlayerInput(player: Player, action: PlayerAction) {
+    switch (action) {
+      case up: {
+        this.pendingInputs[player].up = true;
+        this.pendingInputs[player].down = false;
+      } break;
+      case down: {
+        this.pendingInputs[player].up = false;
+        this.pendingInputs[player].down = true;
+      } break;
+      case stay: {
+        this.pendingInputs[player].up = false;
+        this.pendingInputs[player].down = false;
+      } break;
+      default: {
+        console.error('Unknown player action');
+      }
+    }
+  }
+
+  /**
+   * @deprecated
+   * @param player
+   * @param input
+   */
   setInputUp(player: Player, input: boolean = false) {
     this.pendingInputs[player].up = input;
   }
+  /**
+   * @deprecated
+   * @param player
+   * @param input
+   */
   setInputDown(player: Player, input: boolean = false) {
     this.pendingInputs[player].down = input;
   }
