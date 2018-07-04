@@ -52,16 +52,15 @@ export class PongRenderer {
     // this.ctx.clearRect(0, 0, this.canvasEl.width, this.canvasEl.height);
 
     // Draw the board background
-    this.ctx.globalAlpha = 0.05;
+    // this.ctx.globalAlpha = 0.05;
     this.ctx.fillRect(0, 0, width, height);
-    this.ctx.globalAlpha = 1;
+    // this.ctx.globalAlpha = 1;
 
     // Draw the game objects
     this.drawBoundaries();
     this.drawScore();
     this.drawBall();
     this.drawPaddles();
-
   }
 
   drawPaddles() {
@@ -111,14 +110,11 @@ export class PongRenderer {
   drawBall() {
     this.ctx.fillStyle = 'white';
 
-    this.ctx.beginPath();
-    this.ctx.arc(
-      this.board.xPadding + this.ball.x,
-      this.board.yPadding + this.ball.y,
-
-      this.ball.size,
-      0,
-      2 * Math.PI
+    this.ctx.fillRect(
+      this.board.xPadding + this.ball.x - this.ball.size,
+      this.board.yPadding + this.ball.y - this.ball.size,
+      this.ball.size * 2,
+      this.ball.size * 2,
     );
 
     this.ctx.fill();
@@ -134,7 +130,6 @@ export class PongRenderer {
       this.board.width + this.board.boundarySize * 2,
       this.board.boundarySize
     );
-
 
     // Bottom edge
     this.ctx.fillRect(
@@ -152,8 +147,8 @@ export class PongRenderer {
     const yOffset = this.board.yPadding + this.scoreSize;
     const xOffset = this.board.xPadding + this.board.width / 2;
     this.ctx.textAlign = 'right';
-    this.ctx.fillText(`${this.score[Player.P1]}`, xOffset - this.scoreSize/2, yOffset);
+    this.ctx.fillText('' + this.score[Player.P1], xOffset - this.scoreSize/2, yOffset);
     this.ctx.textAlign = 'left';
-    this.ctx.fillText(`${this.score[Player.P2]}`, xOffset + this.scoreSize/2, yOffset);
+    this.ctx.fillText('' + this.score[Player.P2], xOffset + this.scoreSize/2, yOffset);
   }
 }

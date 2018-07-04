@@ -1,24 +1,17 @@
 import { Game } from "./index";
 import { GameState } from "./models/GameState";
+import { PlayerAction } from "./models/PlayerAction";
 
 export class NaiveAi {
-  game: Game;
-  state: GameState;
-  chaseDistance = 10;
+  chaseDistance = 20;
 
-  constructor(game: Game) {
-    this.game = game;
-    this.state = game.getState();
-  }
-
-  update() {
-    this.game.setP2InputUp(false);
-    this.game.setP2InputDown(false);
-
-    if (this.state.ballY > this.state.playerPosition + this.chaseDistance) {
-      this.game.setP2InputDown(true);
-    } else if (this.state.ballY < this.state.playerPosition - this.chaseDistance) {
-      this.game.setP2InputUp(true);
+  update(state: GameState, setInput: Function) {
+    if (state.ballY > state.playerPosition + this.chaseDistance) {
+      setInput(PlayerAction.down);
+    } else if (state.ballY < state.playerPosition - this.chaseDistance) {
+      setInput(PlayerAction.up);
+    } else {
+      setInput(PlayerAction.stay);
     }
   }
 }

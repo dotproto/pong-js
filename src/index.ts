@@ -2,14 +2,17 @@ import { BallState } from "./models/BallState";
 import { BoardSettings } from "./models/BoardSettings";
 import { GameState } from "./models/GameState";
 import { PaddleSettings } from "./models/PaddleSettings";
-import { Player } from "./models/Player";
-import { PlayerInput } from "./models/PlayerInput";
+import { Player, P2, P1 } from "./models/Player";
+import { PlayerInputState } from "./models/PlayerInput";
 import { PlayerState } from "./models/PlayerState";
 import { PongRendererConfig } from "./models/PongRendererConfig";
 import { ScoreState } from "./models/ScoreState";
 import { NaiveAi } from './naiveAi';
 import { PongRenderer } from './PongRenderer';
 import { mirrorX, mirrorY, PI } from './trig';
+import { PlayerAction, up, down, stay } from './models/PlayerAction';
+
+const raf = window.requestAnimationFrame;
 
 export class Game {
 
@@ -34,18 +37,18 @@ export class Game {
   velocityMax = 20;
 
   pendingInputs: {
-    [Player.P1]: PlayerInput,
-    [Player.P2]: PlayerInput,
+    [P1]: PlayerInputState,
+    [P2]: PlayerInputState,
   } = {
-    [Player.P1]: {
+    [P1]: {
       up: false,
       down: false,
     },
-    [Player.P2]: {
+    [P2]: {
       up: false,
       down: false,
     },
-  }
+  };
 
   ball: BallState = {
     /** Ball radius in game units */
@@ -60,8 +63,8 @@ export class Game {
     // angle: 2 * PI / 17, // misses right paddle
     // angle: 15 * PI / 17, // misses left paddle
     // angle: 1.45 * PI / 180, // a couple direct paddle hits
+  };
 
-  }
   /** Paddle height in game units */
   paddle: PaddleSettings = {
     height: 60,
@@ -73,13 +76,13 @@ export class Game {
 
   /** Position of the player's paddles in the playable game area */
   playerPosition: PlayerState = {
-    [Player.P1]: 0,
-    [Player.P2]: 0,
+    [P1]: 0,
+    [P2]: 0,
   }
 
   score: ScoreState = {
-    [Player.P1]: 0,
-    [Player.P2]: 0,
+    [P1]: 0,
+    [P2]: 0,
     max: 10,
   }
 
@@ -117,17 +120,18 @@ export class Game {
         return game.ball.velocity;
       },
       get playerPosition(): number {
-        return game.playerPosition[Player.P2];
+        return game.playerPosition[P2];
       },
       get opponentPosition(): number {
-        return game.playerPosition[Player.P1];
+        return game.playerPosition[P1];
       }
     });
 
     let playing = true;
+    const setInput = this.setInput.bind(this);
     const gameLoop = () => {
       if (this.ai) {
-        this.ai.update();
+        this.ai.update(this.gameState, setInput);
       }
 
       // Update game state
@@ -136,10 +140,30 @@ export class Game {
       this.renderer.render();
 
       if (playing) {
-        return window.requestAnimationFrame(gameLoop);
+        return raf(gameLoop);
       }
     };
     gameLoop();
+  }
+
+  setInput(action: PlayerAction) {
+    switch (action) {
+      case up: {
+        this.setInputUp(P2, true);
+        this.setInputDown(P2, false);
+      } break;
+      case down: {
+        this.setInputUp(P2, false);
+        this.setInputDown(P2, true);
+      } break;
+      case stay: {
+        this.setInputUp(P2, false);
+        this.setInputDown(P2, false);
+      } break;
+      default: {
+        console.error('Unknown player action');
+      }
+    }
   }
 
   setAi(aiInstance: NaiveAi) {
@@ -155,8 +179,8 @@ export class Game {
     const middleY = this.board.height / 2;
 
     // Set up player positions
-    this.playerPosition[Player.P1] = middleY + 1;
-    this.playerPosition[Player.P2] = middleY + 1;
+    this.playerPosition[P1] = middleY + 1;
+    this.playerPosition[P2] = middleY + 1;
 
     // Set initial ball position (middle)
     this.ball.x = middleX;
@@ -189,15 +213,15 @@ export class Game {
       switch (key) {
         // Player 1 keys
         case 81:
-          return this.setP1InputUp(true);
+          return this.setInputUp(P1, true);
         case 65:
-          return this.setP1InputDown(true);
+          return this.setInputDown(P1, true);
 
         // Player 2 keys
         case 219:
-          return this.setP2InputUp(true);
+          return this.setInputUp(P2, true);
         case 222:
-          return this.setP2InputDown(true);
+          return this.setInputDown(P2, true);
         default:
           // Unknown input
       }
@@ -213,33 +237,40 @@ export class Game {
       switch (key) {
         // Player 1 keys
         case 81:
-          return this.setP1InputUp(false);
+          return this.setInputUp(P1, false);
         case 65:
-          return this.setP1InputDown(false);
+          return this.setInputDown(P1, false);
 
         // Player 2 keys
         case 219:
-          return this.setP2InputUp(false);
+          return this.setInputUp(P2, false);
         case 222:
-          return this.setP2InputDown(false);
+          return this.setInputDown(P2, false);
         default:
           // Unknown input
       }
     });
   }
 
+  setInputUp(player: Player, input: boolean = false) {
+    this.pendingInputs[player].up = input;
+  }
+  setInputDown(player: Player, input: boolean = false) {
+    this.pendingInputs[player].down = input;
+  }
+
   setP1InputUp(input: boolean = false) {
-    this.pendingInputs[Player.P1].up = input;
+    this.pendingInputs[P1].up = input;
   }
   setP1InputDown(input: boolean = false) {
-    this.pendingInputs[Player.P1].down = input;
+    this.pendingInputs[P1].down = input;
   }
 
   setP2InputUp(input: boolean = false) {
-    this.pendingInputs[Player.P2].up = input;
+    this.pendingInputs[P2].up = input;
   }
   setP2InputDown(input: boolean = false) {
-    this.pendingInputs[Player.P2].down = input;
+    this.pendingInputs[P2].down = input;
   }
 
   update() {
@@ -254,16 +285,16 @@ export class Game {
     const maxHeight = this.board.height - this.paddle.height / 2;
 
     // Update P1
-    if (this.pendingInputs[Player.P1].up && !this.pendingInputs[Player.P1].down) {
-      this.playerPosition[Player.P1] = Math.max(minHeight, -this.paddle.speed + this.playerPosition[Player.P1]);
-    } else if (!this.pendingInputs[Player.P1].up && this.pendingInputs[Player.P1].down) {
-      this.playerPosition[Player.P1] = Math.min(maxHeight, this.paddle.speed + this.playerPosition[Player.P1]);
+    if (this.pendingInputs[P1].up && !this.pendingInputs[P1].down) {
+      this.playerPosition[P1] = Math.max(minHeight, -this.paddle.speed + this.playerPosition[P1]);
+    } else if (!this.pendingInputs[P1].up && this.pendingInputs[P1].down) {
+      this.playerPosition[P1] = Math.min(maxHeight, this.paddle.speed + this.playerPosition[P1]);
     }
     // Update P2
-    if (this.pendingInputs[Player.P2].up && !this.pendingInputs[Player.P2].down) {
-      this.playerPosition[Player.P2] = Math.max(minHeight, -this.paddle.speed + this.playerPosition[Player.P2])
-    } else if (!this.pendingInputs[Player.P2].up && this.pendingInputs[Player.P2].down) {
-      this.playerPosition[Player.P2] = Math.min(maxHeight, this.paddle.speed + this.playerPosition[Player.P2])
+    if (this.pendingInputs[P2].up && !this.pendingInputs[P2].down) {
+      this.playerPosition[P2] = Math.max(minHeight, -this.paddle.speed + this.playerPosition[P2])
+    } else if (!this.pendingInputs[P2].up && this.pendingInputs[P2].down) {
+      this.playerPosition[P2] = Math.min(maxHeight, this.paddle.speed + this.playerPosition[P2])
     }
 
   }
@@ -302,7 +333,7 @@ export class Game {
         /** Multiply by -1 to convert from cartisian to canvas coordinates */
         const collisionY = Math.tan(this.ball.angle) * -1 * ((this.board.width - this.ball.size) - this.ball.x) + this.ball.y;
 
-        const paddleCollisionPoint = this.paddleCollisionCheck(this.playerPosition[Player.P2], collisionY);
+        const paddleCollisionPoint = this.paddleCollisionCheck(this.playerPosition[P2], collisionY);
         if (paddleCollisionPoint !== null) {
 
           const collisionScalar = (paddleCollisionPoint + this.ball.size) / (this.paddle.height + this.ball.size * 2);
@@ -314,7 +345,7 @@ export class Game {
 
           this.increaseVelocity();
         } else {
-          return this.endVolley(Player.P1);
+          return this.endVolley(P1);
         }
       }
     } else {
@@ -323,7 +354,7 @@ export class Game {
         /** Multiply by -1 to convert from cartisian to canvas coordinates */
         const collisionY = Math.tan(this.ball.angle) * -1 * ((0 + this.ball.size) - this.ball.x) + this.ball.y;
 
-        const paddleCollisionPoint = this.paddleCollisionCheck(this.playerPosition[Player.P1], collisionY);
+        const paddleCollisionPoint = this.paddleCollisionCheck(this.playerPosition[P1], collisionY);
 
         if (paddleCollisionPoint !== null) {
           const collisionScalar = (paddleCollisionPoint + this.ball.size) / (this.paddle.height + this.ball.size * 2);
@@ -335,7 +366,7 @@ export class Game {
 
           this.increaseVelocity();
         } else {
-          return this.endVolley(Player.P2);
+          return this.endVolley(P2);
         }
       }
     }
@@ -364,7 +395,7 @@ export class Game {
 
   endVolley(winner: Player) {
     this.updateScore(winner);
-    if (winner === Player.P1) {
+    if (winner === P1) {
       this.ball.angle = PI;
     } else {
       this.ball.angle = 0;
@@ -376,8 +407,8 @@ export class Game {
     this.score[winner] += 1;
     if (this.score[winner] === this.score.max) {
 
-      this.score[Player.P1] = 0;
-      this.score[Player.P2] = 0;
+      this.score[P1] = 0;
+      this.score[P2] = 0;
 
       this.resetGameObjectPosition();
     }
@@ -395,7 +426,7 @@ class Main {
 
   constructor() {
     this.game = new Game();
-    this.game.setAi(new NaiveAi(this.game));
+    this.game.setAi(new NaiveAi());
   }
 
 }

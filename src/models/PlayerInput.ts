@@ -1,4 +1,4 @@
-export interface PlayerInput {
+export interface PlayerInputState {
   up: boolean;
   down: boolean;
 }
