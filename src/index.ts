@@ -157,7 +157,7 @@ export class Game {
       }
       // Re-render the game world
       this.render();
-      console.log(`num tensors: ${tf.memory().numTensors}`);
+      // console.log(`num tensors: ${tf.memory().numTensors}`);
 
       if (playing) {
         return window.requestAnimationFrame(gameLoop);

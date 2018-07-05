@@ -1,5 +1,6 @@
 import * as tf from "@tensorflow/tfjs";
 import { Game } from "../index";
+import { Rank } from "@tensorflow/tfjs";
 
 /**
  * A reinforcement learning agent that uses a policy gradient to play pong.
@@ -44,6 +45,8 @@ export class PGAgent {
   //  TODOs:
   //    hidden.config.inputShape = State.shape
   //    State.shape = paddleLen + paddlePos*2 + ballPos(x, y) + ballV, + ballRad
+  optimizer = tf.train.adam(this.learningRate, this.beta1, this.beta2);
+
   input = tf.input({shape: [8]});
 
   hiddenLayer = tf.layers.dense({
@@ -53,12 +56,34 @@ export class PGAgent {
     kernelInitializer: 'glorotUniform',
     name: 'hidden'
   });
+
   /** outputs the highest probability action given the observed prior state */
   //  switch activation to softmax to handle num actions > 2
-  outputLayer = tf.layers.dense({units: 1, activation: 'sigmoid', name: 'output'});
-  output = this.outputLayer.apply(this.hiddenLayer.apply(this.input)) as tf.SymbolicTensor;
-  policyNet = tf.model({inputs: this.input, outputs: this.output});
-  optimizer = tf.train.adam(this.learningRate, this.beta1, this.beta2);
+  outputLayer = tf.layers.dense({
+    units: 1, 
+    activation: 'sigmoid', 
+    name: 'output'
+  });
+
+  policyNet = tf.model({
+    inputs: this.input, 
+    outputs: this.outputLayer.apply(this.hiddenLayer.apply(this.input)) as tf.SymbolicTensor
+  });
+
+  predict(state: any) {
+    return tf.tidy(() => {
+      return this.outputLayer.apply(this.hiddenLayer.apply(state)) as tf.Tensor;
+    })
+  }
+
+  loss(predictions: tf.Tensor, actions: tf.Tensor, rewards: tf.Tensor) {
+    return tf.tidy(() => {
+      const p = tf.mul(predictions, actions)
+      const logp = tf.log(tf.sum(p, 1))
+      const loss = tf.neg(tf.sum(tf.mul(rewards, logp)))
+      return loss
+    })
+  }
 
   constructor(game: Game) {
     this.game = game;
@@ -100,38 +125,48 @@ export class PGAgent {
 
   /** ... */
   train() {
-    const timeSteps = this.rewardHistory.length;
-    const actionHist = this.actionHistory.slice(0, -1);
+    const numSamples = this.rewardHistory.length;
+    // right now train is called after actionHistory gets updated and before
+    // reward and state history are updated so you have to slice off the last action
+    // TODO: stop calling updateActionHistory inside of nextAction and call it after train instead.
+    const actionHistory = this.actionHistory.slice(0, -1);
 
-    for (let i = 0; i < timeSteps; i += this.batchSize) {
+    for (let t = 0; t < numSamples; t += this.batchSize) {
 
-      const stateBatch = tf.tensor2d(this.stateHistory.slice(i, i+this.batchSize));
+      const stateBatch = tf.tensor2d(this.stateHistory.slice(t, t+this.batchSize));
 
-      // let predictions = tf.tidy(() => {
-      //   return this.policyNet.predict(stateBatch) as tf.Tensor;
-      // });
       let rewardBatch = tf.tidy(() => { 
-        return tf.tensor1d(this.rewardHistory.slice(i, i+this.batchSize));
+        return tf.tensor1d(this.rewardHistory.slice(t, t+this.batchSize));
       });
       let actionBatch = tf.tidy(() => { 
-        return tf.tensor1d(actionHist.slice(i, i+this.batchSize));
+        return tf.tensor1d(actionHistory.slice(t, t+this.batchSize));
       });
-
-      // predictions.print(true);
-      // console.log(rewardBatch.print(true));
-      // console.log(actionBatch.print(true));
-
-      let predictions = this.policyNet.predict(stateBatch) as tf.Tensor;
 
       this.optimizer.minimize(() => {
-        let predictionVar = tf.variable(predictions.squeeze()) as tf.Variable;
-        predictionVar.print(true);
+
+        // let predictionVar = tf.variable(this.policyNet.predict(stateBatch)as tf.Tensor) as tf.Variable;
+        // predictionVar.print(true);
         // console.log(tf.losses.logLoss(actionBatch, predictionVar.squeeze(), rewardBatch, 0.0001).print());
-        return tf.losses.logLoss(actionBatch, predictionVar.squeeze(), rewardBatch, 0.0001);
+        // return tf.losses.logLoss(actionBatch, predictionVar.squeeze(), rewardBatch, 0.0001);
+
+        let predictions = this.predict(stateBatch) as tf.Variable<Rank.R1>;
+        console.log('******************START PREDICTIONS ******************')
+        predictions.print(true);
+        console.log('******************END PREDICTIONS ******************')
+        const loss = this.loss(
+          actionBatch, 
+          predictions,
+          rewardBatch, 
+        ) as tf.Tensor<Rank.R0>
+
+        loss.print();
+
+        return loss;
       });
-      predictions.dispose();
+      // predictions.dispose();
       rewardBatch.dispose();
       actionBatch.dispose();
+      stateBatch.dispose();
     }
   }
 
