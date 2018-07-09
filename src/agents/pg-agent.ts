@@ -78,22 +78,14 @@ export class PGAgent {
 
   loss(predictions: tf.Tensor, actions: tf.Tensor, rewards: tf.Tensor) {
     return tf.tidy(() => {
-      const p = tf.mul(predictions, actions)
-      const logp = tf.log(tf.sum(p, 1))
-      const loss = tf.neg(tf.sum(tf.mul(rewards, logp)))
-      return loss
+      // add scalar to all rewards to prevent 0 rewards returning losses of NaN
+      const adjustedRewards = rewards.add(tf.scalar(0.000001));
+      return tf.losses.logLoss(actions, predictions, adjustedRewards, 0.000001);
     })
   }
 
   constructor(game: Game) {
     this.game = game;
-
-    // build and compile the policy network
-
-    // NOTE: try vanilla logLoss first but may need a custom loss function.
-    // QUESTION: does the model need to be compiled with an optimizer and loss function
-    // if we aren't using the built in model.train function? 
-    // does it need to be compiled at all?
   }
 
   updateRewardHistory(reward: number) {
@@ -111,11 +103,11 @@ export class PGAgent {
   discountRewards(rewards: Array<number>) {
     let discountedRewards: Array<number> = Array.apply(null, Array(rewards.length)).map(() => 0);
     /** G is the `return` the cumulative discounted reward after time t */
-    let G = 0.0;
+    let G = 0;
     // loop from rewards.size to 0
-    for (let t = rewards.length; t >= 0; t--) {
+    for (let t = rewards.length - 1; t >= 0; t--) {
       if (Math.abs(rewards[t]) === 10) {
-        G = 0.0;
+        G = 0;
       }
         G = G * this.gamma + rewards[t];
         discountedRewards[t] = G;
@@ -124,49 +116,44 @@ export class PGAgent {
   }
 
   /** ... */
-  train() {
+  train(epochs: number) {
     const numSamples = this.rewardHistory.length;
     // right now train is called after actionHistory gets updated and before
     // reward and state history are updated so you have to slice off the last action
     // TODO: stop calling updateActionHistory inside of nextAction and call it after train instead.
     const actionHistory = this.actionHistory.slice(0, -1);
 
-    for (let t = 0; t < numSamples; t += this.batchSize) {
+    for (let epoch = 0; epoch < epochs; epoch++) {
+      for (let t = 0; t < numSamples; t += this.batchSize) {
 
-      const stateBatch = tf.tensor2d(this.stateHistory.slice(t, t+this.batchSize));
+        const stateBatch = tf.tidy(() => {
+          return tf.tensor2d(this.stateHistory.slice(t, t+this.batchSize));
+        });
+        const rewardBatch = tf.tidy(() => { 
+          return tf.tensor1d(
+            this.discountRewards(this.rewardHistory.slice(t, t+this.batchSize)));
+        });
+        const actionBatch = tf.tidy(() => { 
+          return tf.tensor1d(actionHistory.slice(t, t+this.batchSize));
+        });
 
-      let rewardBatch = tf.tidy(() => { 
-        return tf.tensor1d(this.rewardHistory.slice(t, t+this.batchSize));
-      });
-      let actionBatch = tf.tidy(() => { 
-        return tf.tensor1d(actionHistory.slice(t, t+this.batchSize));
-      });
+        this.optimizer.minimize(() => {
+          let predictions = this.predict(stateBatch) as tf.Variable<Rank.R1>;
+          const loss = this.loss(
+            actionBatch, 
+            predictions.squeeze(),
+            rewardBatch
+          ) as tf.Tensor<Rank.R0>;
 
-      this.optimizer.minimize(() => {
+          loss.print();
 
-        // let predictionVar = tf.variable(this.policyNet.predict(stateBatch)as tf.Tensor) as tf.Variable;
-        // predictionVar.print(true);
-        // console.log(tf.losses.logLoss(actionBatch, predictionVar.squeeze(), rewardBatch, 0.0001).print());
-        // return tf.losses.logLoss(actionBatch, predictionVar.squeeze(), rewardBatch, 0.0001);
+          return loss;
+        });
 
-        let predictions = this.predict(stateBatch) as tf.Variable<Rank.R1>;
-        console.log('******************START PREDICTIONS ******************')
-        predictions.print(true);
-        console.log('******************END PREDICTIONS ******************')
-        const loss = this.loss(
-          actionBatch, 
-          predictions,
-          rewardBatch, 
-        ) as tf.Tensor<Rank.R0>
-
-        loss.print();
-
-        return loss;
-      });
-      // predictions.dispose();
-      rewardBatch.dispose();
-      actionBatch.dispose();
-      stateBatch.dispose();
+        rewardBatch.dispose();
+        actionBatch.dispose();
+        stateBatch.dispose();
+      }
     }
   }
 
@@ -179,8 +166,7 @@ export class PGAgent {
       }) as tf.Tensor;
       // prediction.print(true);
       const action = tf.tidy(() => {
-        const output = prediction.squeeze().dataSync()[0];
-        return output;
+        return prediction.squeeze().dataSync()[0];
       })
       const choice = Math.random() < action ? 1 : 0;
       this.actions[choice]();

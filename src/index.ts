@@ -23,6 +23,7 @@ export interface GameState {
   player2Score: number;
 }
 
+
 export class Game {
 
   /** Height and width units */
@@ -408,7 +409,7 @@ export class Game {
     }
     this.resetGameObjectPosition();
     if (this.agent1) {
-      this.agent1.train();
+      this.agent1.train(1);
     }
   }
 
