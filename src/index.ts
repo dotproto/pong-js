@@ -139,7 +139,7 @@ export class Game {
     let playing = true;
     const gameLoop = () => {
       if (this.ai) {
-        this.ai.next_action();
+        this.ai.nextAction();
       }
       if (this.agent1) {
         this.agent1.nextAction(this.getStateVals());
