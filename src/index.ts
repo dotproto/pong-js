@@ -1,5 +1,6 @@
+import * as tf from "@tensorflow/tfjs";
 import { mirrorX, mirrorY, PI, TAU } from './trig';
-import { NaiveAi } from './naiveAi';
+import { PGAgent, RandomAgent, ReflexAgent } from './agents/index';
 
 enum Player {
   P1 = 'p1',
@@ -16,9 +17,12 @@ export interface GameState {
   ballX: number;
   ballAngle: number;
   ballVelocity: number;
-  playerPosition: number;
-  opponentPosition: number;
+  player1Position: number;
+  player2Position: number;
+  player1Score: number;
+  player2Score: number;
 }
+
 
 export class Game {
 
@@ -69,8 +73,8 @@ export class Game {
     // angle: 2 * PI / 17, // misses right paddle
     // angle: 15 * PI / 17, // misses left paddle
     // angle: 1.45 * PI / 180, // a couple direct paddle hits
-
   }
+
   /** Paddle height in game units */
   paddle = {
     height: 60,
@@ -85,7 +89,8 @@ export class Game {
     [Player.P1]: 0,
     [Player.P2]: 0,
   }
-
+  /** current round number */
+  round = 1;
   score = {
     [Player.P1]: 0,
     [Player.P2]: 0,
@@ -93,8 +98,8 @@ export class Game {
   }
 
   fontSize = 60;
-
-  ai: NaiveAi;
+  ai: ReflexAgent;
+  agent1: PGAgent;
   canvasEl: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
 
@@ -117,24 +122,43 @@ export class Game {
       get ballVelocity(): number {
         return game.ball.velocity;
       },
-      get playerPosition(): number {
+      get player1Position(): number {
+        return game.playerPosition[Player.P1];
+      },
+      get player2Position(): number {
         return game.playerPosition[Player.P2];
       },
-      get opponentPosition(): number {
-        return game.playerPosition[Player.P1];
-      }
+      get player1Score(): number {
+        return game.score[Player.P1];
+      },  
+      get player2Score(): number {
+        return game.score[Player.P2];
+      },
     });
 
     let playing = true;
     const gameLoop = () => {
       if (this.ai) {
-        this.ai.update();
+        this.ai.nextAction();
+      }
+      if (this.agent1) {
+        this.agent1.nextAction(this.getStateVals());
       }
 
+      const priorState = {...this.gameState}
       // Update game state
       this.update();
+      // train the agent asynchronously
+      if (this.agent1) {
+        // calculate reward
+        const currentReward = this.calculateReward(priorState, this.gameState);
+        this.agent1.updateRewardHistory(currentReward);
+        this.agent1.updateStateHistory(this.getStateVals());
+
+      }
       // Re-render the game world
       this.render();
+      console.log(`num tensors: ${tf.memory().numTensors}`);
 
       if (playing) {
         return window.requestAnimationFrame(gameLoop);
@@ -143,8 +167,12 @@ export class Game {
     gameLoop();
   }
 
-  setAi(aiInstance: NaiveAi) {
+  setAi(aiInstance: ReflexAgent) {
     this.ai = aiInstance;
+  }
+
+  setAgent1(agent1Instance: PGAgent) {
+    this.agent1 = agent1Instance;
   }
 
   initGameState() {
@@ -342,7 +370,7 @@ export class Game {
           const collisionScalar = (paddleCollisionPoint + this.ball.size) / (this.paddle.height + this.ball.size * 2);
 
           // Ball hit the paddle, reflect!
-          const overshoot = projectedX - this.ball.size
+          const overshoot = projectedX - this.ball.size;
           projectedX = 0 - overshoot + this.ball.size;
           this.ball.angle = this.paddle.range * collisionScalar - this.paddle.range / 2;
 
@@ -383,12 +411,14 @@ export class Game {
       this.ball.angle = 0;
     }
     this.resetGameObjectPosition();
+    if (this.agent1) {
+      this.agent1.train(1);
+    }
   }
 
   updateScore(winner: Player) {
     this.score[winner] += 1;
     if (this.score[winner] === this.score.max) {
-
       this.score[Player.P1] = 0;
       this.score[Player.P2] = 0;
 
@@ -511,21 +541,51 @@ export class Game {
     this.ctx.fillText(`${this.score[Player.P2]}`, xOffset + this.fontSize/2, yOffset);
   }
 
+  calculateReward(priorState: GameState, currentState: GameState) {
+    if (priorState.player1Score < currentState.player1Score) {
+      if (currentState.player1Score === this.score.max) {
+        return 10;
+      }
+      return 1;
+    } else if (priorState.player2Score < currentState.player2Score) {
+      if (currentState.player2Score === this.score.max) {
+        return -10;
+      }
+      return -1;
+      // if the balling was moving left...
+    } else if (priorState.ballAngle > 0.5 * PI && priorState.ballAngle < 1.5 * PI ) {
+      // and now its moving right...
+      if (currentState.ballAngle < 0.5 * PI || currentState.ballAngle > 1.5 * PI) {
+        return 1;
+      }
+    }
+    return 0;
+  }
+
   getState(): GameState {
     return this.gameState;
   }
+
+  getStateVals() {
+    const stateVals = (<any>Object).values(this.getState());
+    return stateVals;
+  }
+  
 }
 
 class Main {
 
   game: Game;
-  ai: NaiveAi;
+  
+  agent1: PGAgent;
+  // agent2: ReflexAgent;
+  ai: ReflexAgent;
 
   constructor() {
     this.game = new Game();
-    this.game.setAi(new NaiveAi(this.game));
+    this.game.setAi(new ReflexAgent(this.game));
+    this.game.setAgent1(new PGAgent(this.game));
   }
-
 }
 
 const main = new Main();
