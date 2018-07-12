@@ -1,6 +1,7 @@
 import * as tf from "@tensorflow/tfjs";
 import { Game } from "../index";
 import { Rank } from "@tensorflow/tfjs";
+import { Metrics } from "../metrics";
 
 /**
  * A reinforcement learning agent that uses a policy gradient to play pong.
@@ -11,6 +12,7 @@ import { Rank } from "@tensorflow/tfjs";
  */
 export class PGAgent {
   game: Game;
+  metrics: Metrics = new Metrics();
 
   actions = [
     // up
@@ -39,6 +41,7 @@ export class PGAgent {
   stateHistory: Array<Array<number>> = []; 
   actionHistory: Array<number> = [];
   rewardHistory: Array<number> = [];
+  lossHistory: Array<number> = [];
 
   /** Policy network - outputs the probability of an action given the current state */
   /** hidden layer of the policy net */
@@ -124,17 +127,18 @@ export class PGAgent {
     const actionHistory = this.actionHistory.slice(0, -1);
 
     for (let epoch = 0; epoch < epochs; epoch++) {
-      for (let t = 0; t < numSamples; t += this.batchSize) {
+      for (let batchStart = 0; batchStart < numSamples; batchStart += this.batchSize) {
+        const batchEnd = batchStart+this.batchSize;
 
         const stateBatch = tf.tidy(() => {
-          return tf.tensor2d(this.stateHistory.slice(t, t+this.batchSize));
+          return tf.tensor2d(this.stateHistory.slice(batchStart, batchEnd));
         });
         const rewardBatch = tf.tidy(() => { 
           return tf.tensor1d(
-            this.discountRewards(this.rewardHistory.slice(t, t+this.batchSize)));
+            this.discountRewards(this.rewardHistory.slice(batchStart, batchEnd)));
         });
         const actionBatch = tf.tidy(() => { 
-          return tf.tensor1d(actionHistory.slice(t, t+this.batchSize));
+          return tf.tensor1d(actionHistory.slice(batchStart, batchEnd));
         });
 
         this.optimizer.minimize(() => {
@@ -145,10 +149,12 @@ export class PGAgent {
             rewardBatch
           ) as tf.Tensor<Rank.R0>;
 
-          loss.print();
+          this.lossHistory.push(loss.dataSync()[0]);
 
           return loss;
         });
+
+        this.plotMetrics();
 
         rewardBatch.dispose();
         actionBatch.dispose();
@@ -173,4 +179,10 @@ export class PGAgent {
       this.updateActionHistory(choice);
       prediction.dispose();
   }
+
+  plotMetrics() {
+    this.metrics.plotLosses(this.lossHistory);
+    this.metrics.plotRewards(this.rewardHistory);
+  };
+
 }
